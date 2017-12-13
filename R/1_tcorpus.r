@@ -6,7 +6,6 @@
 ## note that this file has to be named 1_*, because r files are processed in order by name,
 ## and the tCorpus class has to be created before the additional methods
 
-
 tCorpus <- R6::R6Class("tCorpus",
    cloneable=FALSE,
 
@@ -23,11 +22,11 @@ tCorpus <- R6::R6Class("tCorpus",
      },
 
      check_unique_rows = function(d){
-       if (anyDuplicated(d, by = c('doc_id','token_i'))) stop('After transformation, token_i is not unique within documents')
+       if (anyDuplicated(d, by = c('doc_id','token_id'))) stop('After transformation, token_id is not unique within documents')
      },
 
      set_keys = function(){
-       if (!identical(key(private$.data), c('doc_id', 'token_i'))) setkey(private$.data, 'doc_id', 'token_i')
+       if (!identical(key(private$.data), c('doc_id', 'token_id'))) setkey(private$.data, 'doc_id', 'token_id')
        if (!identical(key(private$.meta), c('doc_id'))) setkey(private$.meta, 'doc_id')
      },
 
@@ -58,10 +57,10 @@ tCorpus <- R6::R6Class("tCorpus",
      },
 
 ## SHOW/GET DATA METHODS ##
-    get = function(columns=NULL, keep_df=F, as.df=F, subset=NULL, doc_id=NULL, token_i=NULL, safe_copy=T) {
+    get = function(columns=NULL, keep_df=F, as.df=F, subset=NULL, doc_id=NULL, token_id=NULL, safe_copy=T) {
       if (class(substitute(subset)) %in% c('call', 'name')) subset = self$eval(substitute(subset), parent.frame())
       if (!is.null(doc_id) & !is.null(subset)) stop('Cannot filter by subset and doc_ids at the same time')
-      if (is.null(doc_id) & !is.null(token_i)) stop('token_i can only be given in pairs with doc_id')
+      if (is.null(doc_id) & !is.null(token_id)) stop('token_id can only be given in pairs with doc_id')
 
       if (is.null(doc_id) & is.null(subset)) {
         if (is.null(columns)) {
@@ -73,12 +72,12 @@ tCorpus <- R6::R6Class("tCorpus",
         if (is.null(columns)) columns = colnames(private$.data)
         if (!is.null(subset)) d = if (length(columns) > 1 | keep_df) private$.data[subset,columns,with=F] else private$.data[[columns]][subset]
         if (!is.null(doc_id)) {
-          if (is.null(token_i)) {
+          if (is.null(token_id)) {
             positions = list(doc_ids = as.character(doc_id))
             d = if (length(columns) > 1 | keep_df) private$.data[positions,columns,with=F] else private$.data[positions, columns, with=F][[columns]]
           } else {
-            if (!length(doc_id) == length(token_i)) stop('token_i can only be given in pairs with doc_id')
-            positions = list(doc_ids = as.character(doc_id), token_is = as.numeric(token_i))
+            if (!length(doc_id) == length(token_id)) stop('token_id can only be given in pairs with doc_id')
+            positions = list(doc_ids = as.character(doc_id), token_is = as.numeric(token_id))
             d = if (length(columns) > 1 | keep_df) private$.data[positions,columns,with=F] else private$.data[positions, columns, with=F][[columns]]
           }
         }
@@ -133,10 +132,10 @@ tCorpus <- R6::R6Class("tCorpus",
      eval = function(x, enclos=parent.frame()) eval(x, private$.data, enclos),
      eval_meta = function(x, enclos=parent.frame()) eval(x, private$.meta, enclos),
 
-     token_i = function(doc_id=NULL, token_i=NULL, subset=NULL, subset_meta=NULL, window=NULL, inverse=F){
+     token_id = function(doc_id=NULL, token_id=NULL, subset=NULL, subset_meta=NULL, window=NULL, inverse=F){
       if (class(substitute(subset)) %in% c('call', 'name')) subset = self$eval(substitute(subset), parent.frame())
       if (class(substitute(subset_meta)) %in% c('call', 'name')) subset_meta = self$eval_meta(substitute(subset_meta), parent.frame())
-      if (is.null(doc_id) & !is.null(token_i)) stop('token_i can only be given in pairs with doc_id')
+      if (is.null(doc_id) & !is.null(token_id)) stop('token_id can only be given in pairs with doc_id')
 
       ## enable subset to be called from a character string. (e.g. used in search_features)
       if(methods::is(subset, 'character')) subset_meta = eval(parse(text=subset_meta), private$.meta, parent.frame())
@@ -144,7 +143,7 @@ tCorpus <- R6::R6Class("tCorpus",
 
       i = NULL
       if (!is.null(doc_id)) {
-        pos = if (is.null(token_i)) list(doc_id) else list(doc_id, token_i)
+        pos = if (is.null(token_id)) list(doc_id) else list(doc_id, token_id)
         i = private$.data[pos, which=T]
       }
       if (!is.null(subset)) {
@@ -182,10 +181,10 @@ tCorpus <- R6::R6Class("tCorpus",
            }
          }
 
-         if (column %in% c('sent_i','token_i')) {  ## for position columns, first perform checks (inefficient, but this should be a rare case anyway)
+         if (column %in% c('sentence','token_id')) {  ## for position columns, first perform checks (inefficient, but this should be a rare case anyway)
             if (!methods::is(value, 'numeric')) stop('position column has to be numeric/integer')
-            value = as.integer(value)
-            mod = if ('sent_i' %in% self$names) private$.data[,c('doc_id','sent_i','token_i')] else private$.data[,c('doc_id','token_i')]
+            value = as.numeric(value)
+            mod = if ('sentence' %in% self$names) private$.data[,c('doc_id','sentence','token_id')] else private$.data[,c('doc_id','token_id')]
             mod[subset, (column) := value]
             check_unique_rows(mod)
          }
@@ -194,10 +193,10 @@ tCorpus <- R6::R6Class("tCorpus",
          private$.data[subset, (column) := .value]
 
        } else {
-         if (column %in% c('sent_i','token_i')) {
+         if (column %in% c('sentence','token_id')) {
            if (!methods::is(value, 'numeric')) stop('position column has to be numeric/integer')
-           value = as.integer(value)
-           mod = if ('sent_i' %in% self$names) private$.data[,c('doc_id','sent_i','token_i')] else private$.data[,c('doc_id','token_i')]
+           value = as.numeric(value)
+           mod = if ('sentence' %in% self$names) private$.data[,c('doc_id','sentence','token_id')] else private$.data[,c('doc_id','token_id')]
            suppressWarnings(mod[, (column) := value])
            check_unique_rows(mod)
          }
@@ -225,14 +224,14 @@ tCorpus <- R6::R6Class("tCorpus",
      },
 
      delete_columns = function(cnames){
-       protected_cols = intersect(self$names, c('doc_id', 'token_i'))
-       if (any(protected_cols %in% cnames)) stop("The position columns doc_id and token_i cannot be deleted")
+       protected_cols = intersect(self$names, c('doc_id', 'token_id'))
+       if (any(protected_cols %in% cnames)) stop("The position columns doc_id and token_id cannot be deleted")
        for (col in cnames) private$.data[,(col) := NULL]
        invisible(self)
      },
 
      set_name = function(oldname, newname) {
-       if (oldname %in% c('doc_id','sent_i','token_i')) stop('The position columns (doc_id, sent_i, token_i) cannot be set or changed')
+       if (oldname %in% c('doc_id','sentence','token_id')) stop('The position columns (doc_id, sentence, token_id) cannot be set or changed')
        if (grepl('^\\.', newname)) stop('column names in a tCorpus cannot start with a dot')
 
        data.table::setnames(private$.data, oldname, newname)
@@ -310,7 +309,7 @@ tCorpus <- R6::R6Class("tCorpus",
         private$set_keys()
       },
 
-     subset = function(subset=NULL, subset_meta=NULL, window=NULL, copy=F){
+     subset = function(subset=NULL, subset_meta=NULL, hits=NULL, window=NULL, copy=F, ...){
        if (class(substitute(subset)) %in% c('call', 'name')) subset = self$eval(substitute(subset), parent.frame())
        if (class(substitute(subset_meta)) %in% c('call', 'name')) subset_meta = self$eval_meta(substitute(subset_meta), parent.frame())
        if (copy) {
@@ -354,7 +353,7 @@ tCorpus <- R6::R6Class("tCorpus",
         self$subset(subset_meta = .subset, copy=copy)
       },
 
-     aggregate = function(meta_cols=NULL, hits=NULL, feature=NULL, count=c('documents','tokens'), wide=T){
+     aggregate = function(meta_cols=NULL, hits=NULL, feature=NULL, count=c('documents','tokens', 'hits'), wide=T){
         count = match.arg(count)
 
         meta = data.table::copy(private$.meta)
@@ -363,9 +362,9 @@ tCorpus <- R6::R6Class("tCorpus",
           meta_cols = 'group'
         }
 
-        len = private$.data[, list(length=.N), by='doc_id']
-        meta = merge(meta, len, by='doc_id')
-        d = meta[, list(N=.N, V=sum(length)), by=meta_cols]
+        len = private$.data[, list(len=.N), by='doc_id']
+        meta = merge(meta, len, by='doc_id', all.x=T)
+        d = meta[, list(N=.N, V=sum(len)), by=meta_cols]
 
         if (!is.null(hits) | !is.null(feature)){
           if (!is.null(hits) & !is.null(feature)) stop('Cannot specify both hits and feature')
@@ -384,18 +383,24 @@ tCorpus <- R6::R6Class("tCorpus",
           }
 
           if (count == 'documents') coldata = coldata[!duplicated(coldata[,c('doc_id','code')]),]
+          if (count == 'hits') coldata = coldata[!duplicated(coldata[,c('doc_id','code','hit_id')]),]
 
-          count_d = meta[list(coldata$doc_id), meta_cols, with=F]
-
-          count_d$code = coldata$code
+          meta = merge(meta, coldata, by='doc_id', all=T)
+          count_d = subset(meta, select = c('code', meta_cols))
           agg_cols = c(meta_cols, 'code')
 
           count_d = count_d[, list(count=.N), by = agg_cols]
-          d = merge(d, count_d, meta_cols)
+          d = merge(d, count_d, meta_cols, all=T)
           d$count[is.na(d$count)] = 0
-          if (wide) d = dcast(d, ... ~ code, value.var='count')
-
+          if (wide) {
+            d = dcast(d, ... ~ code, value.var='count')
+            d[['NA']] = NULL
+            d[is.na(d)] = 0
+          } else {
+            d = subset(d, !is.na(code))
+          }
         }
+
         as.data.frame(d)
       },
 
@@ -433,10 +438,10 @@ tCorpus <- R6::R6Class("tCorpus",
         }
 
         ## if not fixed (exact value matching), first lookup x as regex in unique values
-        ## note that mem_lookup_terms is memoised, and returns indices to be low on memory
+        ## note that mem_lookup_terms is memoised
         if (!fixed) {
           uval = if (is.factor(private$.data[[feature]])) levels(private$.data[[feature]]) else unique(private$.data[[feature]])
-          x = uval[mem_lookup_terms(x, uval, ignore_case=ignore_case, raw_regex=raw_regex, batchsize=batchsize, useBytes=T, as_ascii=as_ascii)]
+          x = mem_lookup_terms(x, uval, ignore_case=ignore_case, raw_regex=raw_regex, batchsize=batchsize, useBytes=T, as_ascii=as_ascii)
         }
 
         if (length(x) == 0) return(NULL)
@@ -469,7 +474,7 @@ tCorpus <- R6::R6Class("tCorpus",
      n_meta = function() nrow(private$.meta),
      feature_names = function(e=NULL) {
        if (!is.null(e)) stop('Cannot change tcorpus$feature_names by assignment. Instead, use the set_name() function')
-       fnames = colnames(private$.data)[!colnames(private$.data) %in% c('doc_id','sent_i','token_i')]
+       fnames = colnames(private$.data)[!colnames(private$.data) %in% c('doc_id','sentence','token_id')]
      },
      names = function(e=NULL) {
        if (!is.null(e)) stop('Cannot change tcorpus$names by assignment. Instead, use the set_name() function')
@@ -504,7 +509,7 @@ tCorpus <- R6::R6Class("tCorpus",
 #' print(tc)
 #' @export
 print.tCorpus <- function(x, ...) {
-  sent_info = if ('sent_i' %in% x$names) paste(' and sentences (n = ', nrow(unique(x$get(c('doc_id','sent_i')))), ')', sep='') else ''
+  sent_info = if ('sentence' %in% x$names) paste(' and sentences (n = ', nrow(unique(x$get(c('doc_id','sentence')))), ')', sep='') else ''
   cat('tCorpus containing ', x$n, ' tokens',
       '\ngrouped by documents (n = ', x$n_meta, ')', sent_info,
       '\ncontains:',
@@ -532,8 +537,8 @@ refresh_tcorpus <- function(tc){
 rebuild_tcorpus <- function(tc) {
   tokens_to_tcorpus(tokens = tc$get(),
                     doc_col = 'doc_id',
-                    sent_i_col = ifelse('sent_i' %in% tc$names, T, F),
-                    token_i_col = 'token_i',
+                    sentence_col = ifelse('sentence' %in% tc$names, T, F),
+                    token_id_col = 'token_id',
                     meta = tc$get_meta())
 }
 
@@ -623,16 +628,16 @@ get_context <- function(tc, context_level = c('document','sentence'), with_label
     if (!with_labels) levels(context) = 1:length(levels(context))
   }
   if (context_level == 'sentence') {
-    if (!'sent_i' %in% tc$names) stop('Sentence level not possible, since no sentence information is available. To enable sentence level analysis, use split_sentences = T in "create_tcorpus()" or specify sent_i_col in "tokens_to_tcorpus()"')
-    d = tc$get(c('doc_id','sent_i'))
+    if (!'sentence' %in% tc$names) stop('Sentence level not possible, since no sentence information is available. To enable sentence level analysis, use split_sentences = T in "create_tcorpus()" or specify sentence_col in "tokens_to_tcorpus()"')
+    d = tc$get(c('doc_id','sentence'))
     if (with_labels){
-      ucontext = unique(d[,c('doc_id','sent_i')])
-      ucontext = stringi::stri_paste(ucontext$doc_id, ucontext$sent_i, sep=' #')
-      context = fast_factor(global_position(d$sent_i, d$doc_id, presorted = T, position_is_local=T))
+      ucontext = unique(d[,c('doc_id','sentence')])
+      ucontext = stringi::stri_paste(ucontext$doc_id, ucontext$sentence, sep=' #')
+      context = fast_factor(global_position(d$sentence, d$doc_id, presorted = T, position_is_local=T))
       levels(context) = ucontext
     } else {
-      fast_factor(global_position(d$sent_i, d$doc_id, presorted = T, position_is_local=T))
-      context = fast_dummy_factor(global_position(d$sent_i, d$doc_id, presorted = T, position_is_local=T))
+      fast_factor(global_position(d$sentence, d$doc_id, presorted = T, position_is_local=T))
+      context = fast_dummy_factor(global_position(d$sentence, d$doc_id, presorted = T, position_is_local=T))
     }
   }
   context
@@ -640,33 +645,70 @@ get_context <- function(tc, context_level = c('document','sentence'), with_label
 
 ### memoised regex search
 
+lookup_terms <- function(patterns, x, ignore_case=T, raw_regex=T, perl=F, batchsize=25, useBytes=T, as_ascii=FALSE){
+  #forget_if_new(x) ## hacky use of memoise. If input is not in cache because the feature column changed, reset cache
+  x = mem_lookup_table(x, ignore_case, as_ascii)
+
+  if (as_ascii) {
+    patterns = stringi::stri_trans_general(patterns, "any-latin")
+    patterns = stringi::stri_trans_general(patterns, "latin-ascii")
+  }
+  needs_expansion = grepl('?', patterns, fixed=T) | grepl('*', patterns, fixed=T)
+  fixed_patterns = patterns[!needs_expansion]
+  regex_patterns = patterns[needs_expansion]
+
+  if (length(fixed_patterns) > 0) {
+    fixed_patterns = search_term_fixed(fixed_patterns, ignore_case, as_ascii=F)
+    fixed_patterns = x[fixed_patterns, on = 'lookup_term', nomatch=0]
+    fixed_patterns = if (nrow(fixed_patterns) > 0) fixed_patterns$term else c()
+  }
+  if (length(regex_patterns) == 0) return(fixed_patterns)
+
+  ## if there are also regex_patterns
+  if (!raw_regex) regex_patterns = search_term_regex(regex_patterns)
+  if (length(regex_patterns) > 1) { ## if there are multiple terms, make batches of terms and turn each batch into a single regex
+    regex_patterns = split(regex_patterns, ceiling(seq_along(regex_patterns)/batchsize))
+    regex_patterns = sapply(regex_patterns, stringi::stri_paste, collapse='|')
+    out = rep(F, nrow(x))
+    for(exp_pattern_batch in regex_patterns){
+      out = out | grepl(exp_pattern_batch, x$lookup_term, ignore.case=ignore_case, perl=perl, useBytes=useBytes)
+    }
+  } else {
+    out = grepl(regex_patterns, x$term, ignore.case=ignore_case, perl=perl, useBytes=useBytes)
+  }
+  regex_patterns = x$term[out]
+
+  return(union(regex_patterns, fixed_patterns))
+}
+
+search_term_fixed <- function(patterns, ignore_case, as_ascii) {
+  if (ignore_case) patterns = stringi::stri_trans_tolower(patterns)
+  if (as_ascii) {
+    patterns = stringi::stri_trans_general(patterns, "any-latin")
+    patterns = stringi::stri_trans_general(patterns, "latin-ascii")
+  }
+  patterns
+}
 search_term_regex <- function(patterns) {
   patterns = gsub("([^0-9a-zA-Z])", '\\\\\\1', x=patterns)  # escape special characters
   patterns = gsub('\\\\(\\*)|\\\\(\\?)', '.\\1', patterns)  # process wildcards
   paste0('\\b',patterns,'\\b')                              # set word boundaries
 }
 
-lookup_terms <- function(patterns, x, ignore_case=T, raw_regex=T, perl=F, batchsize=25, useBytes=T, as_ascii=FALSE){
-  #forget_if_new(x) ## hacky use of memoise. If input is not in cache because the feature column changed, reset cache
-  if (!raw_regex) patterns = search_term_regex(patterns)
-  if (as_ascii) x = mem_transform_ascii(x)
-  if (length(patterns) > 1) { ## if there are multiple terms, make batches of terms and turn each batch into a single regex
-    patterns = split(patterns, ceiling(seq_along(patterns)/batchsize))
-    patterns = sapply(patterns, stringi::stri_paste, collapse='|')
-    out = rep(F, length(x))
-    for(pattern in patterns){
-      out = out | grepl(pattern, x, ignore.case=ignore_case, perl=perl, useBytes=useBytes)
-    }
-  } else {
-    out = grepl(patterns, x, ignore.case=ignore_case, perl=perl, useBytes=useBytes)
-  }
-  which(out) ## use which to save memory in memoise
-}
 
 mem_lookup_terms <- memoise::memoise(lookup_terms)
-mem_transform_ascii <- memoise::memoise(function(x) {
-  x = stringi::stri_trans_general(x,"any-latin")
-  stringi::stri_trans_general(x,"latin-ascii")
+mem_lookup_table <- memoise::memoise(function(x, ignore_case, as_ascii) {
+  lookup_term = search_term_fixed(x, ignore_case, as_ascii)
+  lookup_table = data.table(term = x, lookup_term = lookup_term)
+
+  .SPLIT = stringi::stri_split(lookup_table$lookup_term, regex = '\\_| ')
+  len = sapply(.SPLIT, length)
+  if (max(len) > 1) {
+    lookup_table = lookup_table[rep(1:nrow(lookup_table), len),]
+    lookup_table[,lookup_term := unlist(.SPLIT)]
+  }
+  setkey(lookup_table, 'lookup_term')
+  lookup_table
 })
 
 forget_if_new <- memoise::memoise(function(x){  ## the forget calls will only be performed if x changes
@@ -676,27 +718,7 @@ forget_if_new <- memoise::memoise(function(x){  ## the forget calls will only be
 
 forget_all_mem <- function(){
   memoise::forget(mem_lookup_terms)
-  memoise::forget(mem_transform_ascii)
+  memoise::forget(mem_lookup_table)
   memoise::forget(forget_if_new)
   invisible(NULL)
 }
-
-## sub query filtering. (in lookup method)
-
-#filter_sub_query <- function(hits, sub_query) {
-#  if (nrow(hits) == 0) return(hits)
-#  .filter = !vector('logical', nrow(hits))
-#  for (n in names(sub_query)) {
-#    if (!n %in% colnames(hits)) stop(sprintf('sub query column %s is not a valid column in the token data', n))
-#    patterns = sub_query[[n]]
-#    is_not = grepl('^\\!', patterns)
-#    patterns = gsub('^\\!', '', patterns)
-#    patterns = search_term_regex(patterns)
-#
-#    regex = paste(patterns[!is_not], collapse='|')
-#    not_regex = paste(patterns[is_not], collapse='|')
-#    if (!regex == "") .filter = .filter & grepl(regex, hits[[n]])
-#    if (!not_regex == "") .filter = .filter & !grepl(not_regex, hits[[n]])
-#  }
-#  subset(hits, .filter)
-#}

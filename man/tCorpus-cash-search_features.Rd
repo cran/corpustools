@@ -15,12 +15,14 @@
 
 \item{context_level}{Select whether the queries should occur within while "documents" or specific "sentences".}
 
+\item{keep_longest}{If TRUE, then overlapping in case of overlapping queries strings in unique_hits mode, the query with the most separate terms is kept. For example, in the text "mr. Bob Smith", the query [smith OR "bob smith"] would match "Bob" and "Smith". If keep_longest is FALSE, the match that is used is determined by the order in the query itself. The same query would then match only "Smith".}
+
+\item{as_ascii}{if TRUE, perform search in ascii.}
+
 \item{verbose}{If TRUE, progress messages will be printed}
 }
 \description{
-Search tokens in a tokenlist using a query that consists of an keyword, and optionally a condition. For a detailed explanation of the query language please consult the query_tutorial markdown file. For a quick summary see the details below.
-
-Note that the query arguments (keyword, condition, code, condition_once) can be vectors to search multiple queries at once. Alternatively, the queries argument can be used to pass these arguments in a data.frame
+Search tokens in a tokenlist using Lucene-like queries. For a detailed explanation of the query language, see the details below.
 }
 \details{
 Brief summary of the query language
@@ -136,7 +138,7 @@ tc$search_features('A AND B~g')$hits
 \dontrun{
 ## advanced queries
 tc = tokens_to_tcorpus(corenlp_tokens, doc_col = 'doc_id',
-                       sent_i_col = 'sentence', token_i_col = 'id')
+                       sentence_col = 'sentence', token_id_col = 'id')
 head(tc$get()) ## search in multiple feature columns with "columnname: "
 
 ## using the sub/flag query to find only mary as a direct object

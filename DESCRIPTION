@@ -1,6 +1,6 @@
 Package: corpustools
-Version: 0.3
-Date: 2017-09-10
+Version: 0.3.1
+Date: 2017-12-13
 Title: Managing, Querying and Analyzing Tokenized Text
 Description: Provides text analysis in R, focusing on the use of a tokenized text format. In this format, the positions of tokens are maintained, and each token can be annotated (e.g., part-of-speech tags, dependency relations).
     Prominent features include advanced Lucene-like querying for specific tokens or contexts (e.g., documents, sentences),
@@ -21,6 +21,6 @@ License: GPL-3
 URL: http://github.com/kasperwelbers/corpustools
 RoxygenNote: 6.0.1
 NeedsCompilation: yes
-Packaged: 2017-10-02 13:54:53 UTC; kasper
+Packaged: 2017-12-13 08:59:42 UTC; kasper
 Repository: CRAN
-Date/Publication: 2017-10-03 13:55:00 UTC
+Date/Publication: 2017-12-13 09:27:42 UTC
