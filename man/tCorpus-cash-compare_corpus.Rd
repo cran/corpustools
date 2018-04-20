@@ -25,14 +25,12 @@
 A vocabularyComparison object
 }
 \description{
-Compare tCorpus vocabulary to that of another (reference) tCorpus
+\strong{Usage:}
 }
-\section{Usage}{
-
+\details{
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 \preformatted{compare_corpus(tc_y, feature, smooth=0.1, min_ratio=NULL, min_chi2=NULL, is_subset=F, yates_cor=c('auto','yes','no'), what=c('freq','docfreq','cooccurrence'))}
 }
-
 \examples{
 tc = create_tcorpus(sotu_texts, doc_column = 'id')
 

@@ -28,8 +28,8 @@ A fitted LDA model, and optionally a new column in the tcorpus (added by referen
 Estimate an LDA topic model using the LDA function from the topicmodels package.
 The parameters other than dtm are simply passed to the sampler but provide a workable default.
 See the description of that function for more information
-}
-\section{Usage}{
+
+\strong{Usage:}
 
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
@@ -38,7 +38,6 @@ lda_fit(feature, create_feature=NULL, K=50, num.iterations=500, alpha=50/K,
      eta=.01, burnin=250, context_level=c('document','sentence'), ...)
 }
 }
-
 \examples{
 \dontrun{
 tc = create_tcorpus(sotu_texts, doc_column = 'id')

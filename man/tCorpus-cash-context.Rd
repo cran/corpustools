@@ -12,13 +12,13 @@
 \description{
 Depending on the purpose, the context of an analysis can be the document level or sentence level. the tCorpus$context() method offers a convenient way to get the context id of tokens for different settings.
 }
-\section{Usage}{
+\details{
+\strong{Usage:}
 
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
 \preformatted{data(context_level = c('document','sentence'), with_labels = T)}
 }
-
 \examples{
 tc <- create_tcorpus(c('Text one first sentence. Text one second sentence', 'Text two'),
                      split_sentences = TRUE)

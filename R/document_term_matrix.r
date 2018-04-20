@@ -1,9 +1,19 @@
-#' Create a document term matrix
+#' Create a document term matrix.
 #'
-#' @section Usage:
+#' @description
+#' Create a document term matrix. The default output is a sparse matrix (Matrix, dgTMatrix). Alternatively, the dtm style from the tm and quanteda package can be used.
+#'
+#' The tCorpus$dfm method is shorthand for using quanteda's dfm (document feature matrix) class. The meta data in the tcorpus is then automatically added as docvars in the dfm.
+#'
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
-#' \preformatted{dtm(feature, context_level=c('document','sentence'), weight=c('termfreq','docfreq','tfidf','norm_tfidf'), drop_empty_terms=T, form=c('Matrix', 'tm_dtm', 'quanteda_dfm'), subset_tokens=NULL, subset_meta=NULL, context=NULL, context_labels=T, feature_labels=T, ngrams=NA, ngram_before_subset=F)}
+#' \preformatted{dtm(feature, context_level = c('document','sentence'), weight = c('termfreq','docfreq','tfidf','norm_tfidf'),
+#'     drop_empty_terms = T, form = c('Matrix', 'tm_dtm', 'quanteda_dfm'), subset_tokens = NULL, subset_meta = NULL,
+#'     context = NULL, context_labels = T, feature_labels = T, ngrams = NA, ngram_before_subset = F)}
+#'
+#' \preformatted{dfm(feature, ...)   ## identical, but without form argument}
 #'
 #' @param feature The name of the feature column
 #' @param context_level Select whether the rows of the dtm should represent "documents" or "sentences".
@@ -19,6 +29,7 @@
 #' @param ngram_before_subset If a subset is used, ngrams can be made before the subset, in which case an ngram can contain tokens that have been filtered out after the subset. Alternatively, if ngrams are made after the subset, ngrams will span over the gaps of tokens that are filtered out.
 #'
 #' @name tCorpus$dtm
+#' @aliases dtm dfm tCorpus$dfm
 #' @examples
 #' tc = create_tcorpus(c("First text first sentence. First text first sentence.",
 #'                    "Second text first sentence"), doc_column = 'id', split_sentences = TRUE)
@@ -45,7 +56,6 @@
 #'
 #' ## use weighting
 #' m = tc$dtm('feature', weight = 'norm_tfidf')
-#' @aliases dtm.tCorpus
 tCorpus$set('public', 'dtm', function(feature, context_level=c('document','sentence'), weight=c('termfreq','docfreq','tfidf','norm_tfidf'), drop_empty_terms=T, form=c('Matrix', 'tm_dtm', 'quanteda_dfm'), subset_tokens=NULL, subset_meta=NULL, context=NULL, context_labels=T, feature_labels=T, ngrams=NA, ngram_before_subset=F) {
   if (class(substitute(subset_tokens)) %in% c('call', 'name')) subset_tokens = self$eval(substitute(subset_tokens), parent.frame())
   if (class(substitute(subset_meta)) %in% c('call', 'name')) subset_meta = self$eval_meta(substitute(subset_meta), parent.frame())
@@ -55,10 +65,19 @@ tCorpus$set('public', 'dtm', function(feature, context_level=c('document','sente
           feature_labels=feature_labels, ngrams=ngrams, ngram_before_subset=ngram_before_subset)
 })
 
+tCorpus$set('public', 'dfm', function(feature, context_level=c('document','sentence'), weight=c('termfreq','docfreq','tfidf','norm_tfidf'), drop_empty_terms=T, subset_tokens=NULL, subset_meta=NULL, context=NULL, context_labels=T, feature_labels=T, ngrams=NA, ngram_before_subset=F) {
+  if (class(substitute(subset_tokens)) %in% c('call', 'name')) subset_tokens = self$eval(substitute(subset_tokens), parent.frame())
+  if (class(substitute(subset_meta)) %in% c('call', 'name')) subset_meta = self$eval_meta(substitute(subset_meta), parent.frame())
+  get_dtm(self, feature=feature, context_level=context_level, weight=weight, drop_empty_terms=drop_empty_terms, form='quanteda_dfm',
+          subset_tokens=subset_tokens, subset_meta=subset_meta, context=context, context_labels=context_labels,
+          feature_labels=feature_labels, ngrams=ngrams, ngram_before_subset=ngram_before_subset)
+})
+
+
 get_dtm <- function(tc, feature, context_level=c('document','sentence'), weight=c('termfreq','docfreq','tfidf','norm_tfidf'), drop_empty_terms=T, form=c('Matrix', 'tm_dtm', 'quanteda_dfm'), subset_tokens=NULL, subset_meta=NULL, context=NULL, context_labels=T, feature_labels=T, ngrams=NA, ngram_before_subset=F){
   form = match.arg(form)
-  if(form == 'tm_dtm') if(!requireNamespace('tm', quietly = T)) stop('To use the tm_dtm output form, you need to have the tm package installed.')
-  if(form == 'quanteda_dfm') if(!requireNamespace('quanteda', quietly = T)) stop('To use the quanteda_dtm output form, you need to have the quanteda package installed.')
+  if(form == 'tm_dtm') require_package('tm', '0.6')
+  if(form == 'quanteda_dfm') require_package('quanteda', '1.1.1')
   is_tcorpus(tc, T)
 
   weight = match.arg(weight)
@@ -70,7 +89,7 @@ get_dtm <- function(tc, feature, context_level=c('document','sentence'), weight=
   if (!is.null(subset_tokens) | !is.null(subset_meta)) {
     .subset_tokens = subset_tokens
     .subset_meta = subset_meta
-    sub_i = tc$token_id(subset = .subset_tokens, subset_meta = .subset_meta)
+    sub_i = tc$get_token_id(subset = .subset_tokens, subset_meta = .subset_meta)
     all_i = i
     i = droplevels(all_i[sub_i])
   } else {
@@ -90,7 +109,7 @@ get_dtm <- function(tc, feature, context_level=c('document','sentence'), weight=
   } else idf = NULL
 
   feature = feature[sub_i]
-  if(drop_empty_terms & methods::is(feature, 'factor')) feature = droplevels(feature)
+  if(drop_empty_terms && methods::is(feature, 'factor')) feature = droplevels(feature)
   notNA = !is.na(feature)
 
   m = Matrix::spMatrix(length(levels(i)), length(levels(feature)),
@@ -107,10 +126,18 @@ get_dtm <- function(tc, feature, context_level=c('document','sentence'), weight=
     if(weight == 'tfidf_norm') attributes(m)$weighting = c("term frequency - inverse document frequency (normalized)", "tf-idf")
     if(!weight %in% c('termfreq','tfidf', 'tfidf_norm')) attributes(m)$weighting = c(weight, weight)
   }
-  if (form == 'quanteda_dfm') m = methods::new("dfmSparse", methods::as(m, 'dgCMatrix'))
-
+  if (form == 'quanteda_dfm') {
+    m = quanteda::as.dfm(methods::as(m, 'dgCMatrix'))
+    dvars = tc$get_meta(copy=T)
+    dvars = dvars[match(rownames(m), dvars$doc_id),]  ## in case of subsetting
+    for (dvar in colnames(dvars)) {
+      if (dvar == 'doc_id') next
+      quanteda::docvars(m, field = dvar) = dvars[[dvar]]
+    }
+  }
   m
 }
+
 
 get_idf <- function(context, feature) {
   idf = unique(cbind(context=context, feature=as.character(feature)))
@@ -133,12 +160,13 @@ weight_dtm <- function(m, weight, idf=NULL){
   if(weight == 'docfreq') {
     m = m > 0
   }
-  methods::as(methods::as(m,'dgCMatrix'), 'dgTMatrix')
+  methods::as(m,'dgCMatrix')
 }
 
-tm_dtm_to_dgTMatrix <- function(dtm){
+as_dgTMatrix <- function(dtm){
+  if (!methods::is(dtm, 'DocumentTermMatrix')) return(methods::as(dtm, 'dgTMatrix'))
   sm = Matrix::spMatrix(nrow(dtm), ncol(dtm), dtm$i, dtm$j, dtm$v)
   rownames(sm) = rownames(dtm)
   colnames(sm) = colnames(dtm)
-  sm
+  methods::as(sm, 'dgTMatrix')
 }

@@ -3,7 +3,8 @@
 #' @description
 #' Compute a number of useful statistics for features: term frequency, idf, etc.
 #'
-#' @section Usage:
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
 #' \preformatted{feature_stats(feature, sent_freq=F)}
@@ -28,7 +29,8 @@ tCorpus$set('public', 'feature_stats', function(feature, context_level=c('docume
 
 #' Show top features
 #'
-#' @section Usage:
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
 #' \preformatted{top_features(feature, n = 10, group_by = NULL, group_by_meta = NULL, return_long = F}
@@ -65,6 +67,7 @@ term_statistics <- function(tc, feature, context_level=c('document','sentence'))
 
 dtm_term_statistics <- function(dtm, feature) {
   dtm = dtm[Matrix::rowSums(dtm) > 0, Matrix::colSums(dtm) > 0]    # get rid of empty rows/columns
+  dtm = as_dgTMatrix(dtm)
   vocabulary = colnames(dtm)
   data.frame(term = as.character(vocabulary),
              characters = nchar(vocabulary),

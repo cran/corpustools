@@ -3,7 +3,7 @@ using namespace Rcpp;
 // [[Rcpp::plugins(cpp11)]]
 
 // [[Rcpp::export]]
-CharacterVector ngrams(CharacterVector tokens, CharacterVector group, int n, std::string sep, std::string empty)
+CharacterVector ngrams_cpp(CharacterVector tokens, CharacterVector group, int n, std::string sep, std::string empty)
 {
   int len = tokens.size();
   CharacterVector out(len);
@@ -16,6 +16,11 @@ CharacterVector ngrams(CharacterVector tokens, CharacterVector group, int n, std
     last_group = std::string(group[i]);
 
     out[i] = tokens[i];
+    if (CharacterVector::is_na(out[i])) {
+      local_i += 1;
+      continue;
+    }
+
     for (int j = 1; j < n; j++)
     {
       if ((local_i - j) < 0){

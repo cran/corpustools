@@ -11,14 +11,13 @@
 }
 \description{
 Compute a number of useful statistics for features: term frequency, idf, etc.
-}
-\section{Usage}{
+
+\strong{Usage:}
 
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
 \preformatted{feature_stats(feature, sent_freq=F)}
 }
-
 \examples{
 tc = create_tcorpus(c('Text one first sentence. Text one second sentence', 'Text two'),
                     split_sentences = TRUE)

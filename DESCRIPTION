@@ -1,6 +1,6 @@
 Package: corpustools
-Version: 0.3.1
-Date: 2017-12-13
+Version: 0.3.3
+Date: 2018-03-23
 Title: Managing, Querying and Analyzing Tokenized Text
 Description: Provides text analysis in R, focusing on the use of a tokenized text format. In this format, the positions of tokens are maintained, and each token can be annotated (e.g., part-of-speech tags, dependency relations).
     Prominent features include advanced Lucene-like querying for specific tokens or contexts (e.g., documents, sentences),
@@ -10,9 +10,9 @@ Author: Kasper Welbers and Wouter van Atteveldt
 Maintainer: Kasper Welbers <kasperwelbers@gmail.com>
 Depends: R (>= 3.2.0), Matrix (>= 1.2), data.table (>= 1.10.4)
 Imports: memoise, methods, plyr, wordcloud (>= 2.5), SnowballC,
-        stringi, Rcpp (>= 0.12.12), R6
-Suggests: testthat, quanteda (>= 0.99.9), tm (>= 0.6), topicmodels,
-        RNewsflow, igraph
+        stringi, Rcpp (>= 0.12.12), R6, udpipe
+Suggests: testthat, quanteda (>= 1.1.1), tm (>= 0.6), topicmodels,
+        igraph
 LinkingTo: Rcpp
 LazyData: true
 Encoding: UTF-8
@@ -21,6 +21,6 @@ License: GPL-3
 URL: http://github.com/kasperwelbers/corpustools
 RoxygenNote: 6.0.1
 NeedsCompilation: yes
-Packaged: 2017-12-13 08:59:42 UTC; kasper
+Packaged: 2018-04-20 11:14:46 UTC; root
 Repository: CRAN
-Date/Publication: 2017-12-13 09:27:42 UTC
+Date/Publication: 2018-04-20 11:46:39 UTC

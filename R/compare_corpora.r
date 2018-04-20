@@ -1,7 +1,8 @@
 
 #' Compare tCorpus vocabulary to that of another (reference) tCorpus
 #'
-#' @section Usage:
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #' \preformatted{compare_corpus(tc_y, feature, smooth=0.1, min_ratio=NULL, min_chi2=NULL, is_subset=F, yates_cor=c('auto','yes','no'), what=c('freq','docfreq','cooccurrence'))}
 #'
@@ -32,14 +33,15 @@
 #' plot(comp)
 #' }
 tCorpus$set('public', 'compare_corpus', function(tc_y, feature, smooth=0.1, min_ratio=NULL, min_chi2=NULL, is_subset=F, yates_cor=c('auto','yes','no'), what=c('freq','docfreq','cooccurrence')){
-  if (is_subset & self$n > tc_y$n) stop('tCorpus x (the one calling the method) cannot be a subset of tCorpus y, because it has more tokens')
+  if (is_subset && self$n > tc_y$n) stop('tCorpus x (the one calling the method) cannot be a subset of tCorpus y, because it has more tokens')
   what = match.arg(what)
   tcorpus_compare(self, tc_y, feature, smooth=smooth, min_ratio=min_ratio, min_chi2=min_chi2, yates_cor=yates_cor, x_is_subset=is_subset, what=what)
 })
 
 #' Compare vocabulary of a subset of a tCorpus to the rest of the tCorpus
 #'
-#' @section Usage:
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #' \preformatted{compare_subset(feature, subset_x=NULL, subset_meta_x=NULL, query_x=NULL, query_feature='token', smooth=0.1, min_ratio=NULL, min_chi2=NULL, yates_cor=c('auto','yes','no'), what=c('freq','docfreq','cooccurrence'))}
 #'
@@ -77,7 +79,7 @@ tCorpus$set('public', 'compare_subset', function(feature, subset_x=NULL, subset_
   subset_meta_x = self$eval_meta(substitute(subset_meta_x), parent.frame())
   what = match.arg(what)
 
-  if(is.null(subset_x) & is.null(subset_meta_x) & is.null(query_x)) stop("at least one of subset_x, subset_meta_x or query_x has to be specified")
+  if(is.null(subset_x) && is.null(subset_meta_x) & is.null(query_x)) stop("at least one of subset_x, subset_meta_x or query_x has to be specified")
   if(!is.null(subset_x) | !is.null(subset_meta_x)) {
     .subset_x = subset_x
     .subset_meta_x = subset_meta_x

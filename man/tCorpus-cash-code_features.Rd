@@ -27,16 +27,13 @@
 }
 \description{
 Add a column to the token data that contains a code (the query label) for tokens that match the query (see \link{tCorpus$search_features}).
-}
-\section{Usage}{
+
+\strong{Usage:}
 
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
-\preformatted{
-code_features(query, code=NULL, feature='token', column='code', ...)
+\preformatted{code_features(query, code=NULL, feature='token', column='code', ...)}
 }
-}
-
 \examples{
 tc = create_tcorpus('Anna and Bob are secretive')
 

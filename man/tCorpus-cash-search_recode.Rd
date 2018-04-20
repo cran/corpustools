@@ -15,8 +15,8 @@
 }
 \description{
 Search features (see \link{tCorpus$search_features}) and replace features with a new value
-}
-\section{Usage}{
+
+\strong{Usage:}
 
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
@@ -24,4 +24,3 @@ Search features (see \link{tCorpus$search_features}) and replace features with a
 search_recode(feature, new_value, keyword, condition = NA, condition_once = F)
 }
 }
-

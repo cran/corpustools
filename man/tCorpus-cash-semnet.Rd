@@ -17,8 +17,8 @@
 }
 \description{
 This function calculates the co-occurence of features and returns a network/graph in the igraph format, where nodes are tokens and edges represent the similarity/adjacency of tokens. Co-occurence is calcuated based on how often two tokens occured within the same document (e.g., news article, chapter, paragraph, sentence). The semnet_window() function can be used to calculate co-occurrence of tokens within a given token distance.
-}
-\section{Usage}{
+
+\strong{Usage:}
 
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
@@ -27,7 +27,6 @@ semnet(feature, measure = c('con_prob', 'con_prob_weighted', 'cosine', 'count_di
        context_level = c('document','sentence'), backbone=F, n.batches=NA)
 }
 }
-
 \examples{
 text = c('A B C', 'D E F. G H I', 'A D', 'GGG')
 tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = TRUE)

@@ -1,6 +1,7 @@
 #' Search for documents or sentences using Boolean queries
 #'
-#' @section Usage:
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
 #' \preformatted{search_contexts(query, code = NULL, feature = 'token', context_level = c('document','sentence'), verbose = F)}
@@ -103,7 +104,8 @@ tCorpus$set('public', 'search_contexts', function(query, code=NULL, feature='tok
 #'
 #' See the documentation for \link[=tCorpus$search_contexts]{subset} for an explanation of the query language.
 #'
-#' @section Usage:
+#' \strong{Usage:}
+#'
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
 #' \preformatted{subset_query(query, feature = 'token', context_level = c('document','sentence'))}
@@ -139,20 +141,23 @@ tCorpus$set('public', 'subset_query', function(query, feature='token', context_l
   if (!is.na(window)) {
     hits = self$search_features(query, feature=feature, context_level=context_level, mode='features')
     if (is.null(hits)) return(NULL)
-    window = self$token_id(hits$hits$doc_id, hits$hits$token_id, window=window)
+    window = self$get_token_id(hits$hits$doc_id, hits$hits$token_id, window=window)
     self$subset(window)
   } else {
     hits = self$search_contexts(query, feature=feature, context_level=context_level)
     if (is.null(hits)) return(NULL)
     if (context_level == 'document'){
-      self$select_meta_rows(self$get_meta('doc_id') %in% hits$hits$doc_id)
+      #self$select_meta_rows(self$get_meta('doc_id') %in% hits$hits$doc_id)
+      .doc_ids = hits$hits$doc_id
+      self$subset(subset_meta= doc_id %in% .doc_ids)
     }
     if (context_level == 'sentence'){
       d = self$get(c('doc_id','sentence'), keep_df=T)
       d$i = 1:nrow(d)
       setkeyv(d, c('doc_id','sentence'))
-      rows = d[list(hits$hits$doc_id, hits$hits$sentence),]$i
-      self$select_rows(rows)
+      .rows = d[list(hits$hits$doc_id, hits$hits$sentence),]$i
+      #self$select_rows(rows)
+      self$subset(subset=.rows)
     }
   }
   invisible(self)
@@ -175,7 +180,7 @@ search_contexts <- function(tc, query, code=NULL, feature='token', context_level
   hits = vector('list', length(query))
   for (i in 1:length(query)) {
     if (verbose) print(code[i])
-    q = parse_query(as.character(query[i]))
+    q = parse_query_cpp(as.character(query[i]))
     h = recursive_search(tc, q, subcontext=subcontext, feature=feature, mode = 'contexts')
     if (!is.null(h)) {
       h[, code := codelabel[i]]

@@ -1,3 +1,19 @@
+#' Check if package with given version exists
+#'
+#' @param package The name of the package
+#' @param min_version The minimum version
+#'
+#' @return An error if package does not exist
+require_package <- function(package, min_version = NULL) {
+  version_string = if (!is.null(min_version)) sprintf(' (>= %s)', min_version) else ''
+  e = sprintf('%s package%s needs to be installed to use this function', package, version_string)
+  if(!requireNamespace(package, quietly = T)) stop(e)
+  if (!is.null(min_version)) {
+    version_comp = utils::compareVersion(as.character(utils::packageVersion(package)), min_version)
+    if (version_comp < 0) stop(e)
+  }
+}
+
 local_id <- function(group, i) {
   ## given global indices per group, make them locally unique
   ## has to be sorted on order(group, i)
@@ -57,7 +73,7 @@ fast_factor <- function(x, levels=NULL) {
   if (!methods::is(x, 'factor')) {
     if (!all(is.na(x))) {
       if (is.null(levels)) levels = vector('character', 0)
-      x = .Call('_corpustools_fast_factor', PACKAGE = 'corpustools', as.character(x), as.character(levels))
+      x = fast_factor_cpp(as.character(x), as.character(levels))
     } else {
       x = fast_dummy_factor(x)
     }
@@ -71,5 +87,12 @@ col_to_hsv <- function(col, alpha=1) {
   ## make mapped to enable vectorization
   hsv_col = grDevices::rgb2hsv(grDevices::col2rgb('red'))
   grDevices::hsv(hsv_col[1], hsv_col[2], hsv_col[3], alpha=alpha)
+}
+
+double_to_single_slash <- function(x) {
+  x = gsub('\\\\n','\n', x)
+  x = gsub('\\\\t','\t', x)
+  x = gsub('\\\\r','\r', x)
+  x
 }
 

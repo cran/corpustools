@@ -22,14 +22,12 @@
 \item{to_subset}{An expression to select a subset. If given, documents are only compared to this subset}
 }
 \description{
-Calculate the similarity of documents
+\strong{Usage:}
 }
-\section{Usage}{
-
+\details{
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 \preformatted{compare_documents(feature='token', date_col=NULL, hour_window=NULL, measure=c('cosine','overlap_pct'), min_similarity=0, weight=c('norm_tfidf', 'tfidf', 'termfreq','docfreq'), ngrams=NA, from_subset=NULL, to_subset=NULL))}
 }
-
 \examples{
 d = data.frame(text = c('a b c d e',
                         'e f g h i j k',

@@ -19,12 +19,12 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
     q = qlist$terms[[j]]
     is_nested = 'terms' %in% names(q)
     if (is_nested) {
-      jhits = recursive_search(tc, q, subcontext=subcontext, feature='token', mode=mode, parent_relation=qlist$relation, all_case_sensitive, all_ghost, all_flag_query, keep_longest, as_ascii, level=level+1)
+      jhits = recursive_search(tc, q, subcontext=subcontext, feature=feature, mode=mode, parent_relation=qlist$relation, all_case_sensitive, all_ghost, all_flag_query, keep_longest, as_ascii, level=level+1)
       if (nterms == 1) {
-        if (level == 1 & mode == 'contexts' & !is.null(jhits)) jhits = unique(subset(jhits, select=c('doc_id',subcontext)))
+        if (level == 1 && mode == 'contexts' & !is.null(jhits)) jhits = unique(subset(jhits, select=c('doc_id',subcontext)))
         return(jhits)
       }
-      if (qlist$relation == 'proximity' & q$relation %in% c('proximity','AND')) stop("Cannot nest proximity or AND search within a proximity search")
+      if (qlist$relation == 'proximity' && q$relation %in% c('proximity','AND')) stop("Cannot nest proximity or AND search within a proximity search")
       if (!is.null(jhits)) {
         if (q$relation == 'sequence') jhits[, .seq_i := .term_i]
         if (qlist$relation %in% c('proximity','sequence','AND')) jhits[, .group_i := paste(j, .group_i, sep='_')] ## for keeping track of nested multi word queries
@@ -37,7 +37,7 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
       flag_query = q$flag_query
       for (n in names(all_flag_query)) flag_query[[n]] = unique(c(flag_query[[n]], all_flag_query[[n]]))
 
-      only_context = mode == 'contexts' & qlist$relation %in% c('AND','NOT')  ## only for AND and NOT, because proximity and sequence require feature positions (and OR can be nested in them)
+      only_context = mode == 'contexts' && qlist$relation %in% c('AND','NOT')  ## only for AND and NOT, because proximity and sequence require feature positions (and OR can be nested in them)
       jhits = tc$lookup(q$term, feature=feature, ignore_case=!.case_sensitive, sub_query=flag_query, only_context=only_context, subcontext=subcontext, as_ascii=as_ascii)
       if (!is.null(jhits)) {
         jhits[, .ghost := .ghost]
@@ -73,8 +73,8 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
   }
   if (nrow(hits) == 0) return(NULL)
 
-  if (level == 1 & mode == 'unique_hits') hits = remove_duplicate_hit_id(hits, keep_longest)
-  if (level == 1 & mode == 'contexts') hits = unique(subset(hits, select=c('doc_id',subcontext)))
+  if (level == 1 && mode == 'unique_hits') hits = remove_duplicate_hit_id(hits, keep_longest)
+  if (level == 1 && mode == 'contexts') hits = unique(subset(hits, select=c('doc_id',subcontext)))
 
   return(hits)
 }
@@ -83,7 +83,7 @@ collapse_or_queries <- function(qlist) {
   if (qlist$relation == 'OR') {
     nested = sapply(qlist$terms, function(x) 'terms' %in% names(x))
     has_flag_query = sapply(qlist$terms, function(x) length(x$flag_query) > 0)
-    select = !nested & !has_flag_query # these terms are collapse-able
+    select = !nested && !has_flag_query # these terms are collapse-able
 
     if (sum(select) > 1) {
       terms = sapply(qlist$terms[select], function(x) x[c('case_sensitive','ghost','term')], simplify = F)
@@ -109,7 +109,7 @@ get_query_code <- function(query, code=NULL) {
     if (!length(code) == length(query)) stop('code and query vectors need to have the same length')
     code = ifelse(is.na(code), hashcode, code)
   } else code = hashcode
-  #print(code)
+
   code[is.na(code)] = paste('query', 1:sum(is.na(code)), sep='_')
   if (anyDuplicated(code)) stop('Cannot have duplicate codes')
   code
@@ -130,7 +130,7 @@ get_sequence_hit <- function(d, seq_length, subcontext=NULL){
   hit_id = NULL ## used in data.table syntax, but need to have bindings for R CMD check
   setorderv(d, c('doc_id', 'token_id', '.term_i'))
   if (!is.null(subcontext)) subcontext = d[[subcontext]]
-  .hit_id = .Call('_corpustools_sequence_hit_ids', PACKAGE = 'corpustools', as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), seq_length)
+  .hit_id = sequence_hit_ids_cpp(as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), seq_length)
   d[,hit_id := .hit_id]
 }
 
@@ -141,7 +141,7 @@ get_proximity_hit <- function(d, n_unique, window=NA, subcontext=NULL, seq_i=NUL
   if (!is.null(seq_i)) seq_i = d[[seq_i]]
   if (!is.null(replace)) replace = d[[replace]]
 
-  .hit_id = .Call('_corpustools_proximity_hit_ids', PACKAGE = 'corpustools', as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), n_unique, window, as.numeric(seq_i), replace, feature_mode, directed)
+  .hit_id = proximity_hit_ids_cpp(as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), n_unique, window, as.numeric(seq_i), replace, feature_mode, directed)
   d[,hit_id := .hit_id]
 }
 
@@ -151,7 +151,7 @@ get_AND_hit <- function(d, n_unique, subcontext=NULL, group_i=NULL, replace=NULL
   if (!is.null(subcontext)) subcontext = d[[subcontext]]
   if (!is.null(group_i)) group_i = d[[group_i]]
   if (!is.null(replace)) replace = d[[replace]]
-  .hit_id = .Call('_corpustools_AND_hit_ids', PACKAGE = 'corpustools', as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), n_unique, as.character(group_i), replace, feature_mode)
+  .hit_id = AND_hit_ids_cpp(as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), n_unique, as.character(group_i), replace, feature_mode)
   d[,hit_id := .hit_id]
 }
 

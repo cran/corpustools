@@ -23,15 +23,14 @@
 }
 \description{
 Get the token and meta data.
-}
-\section{Usage}{
+
+\strong{Usage:}
 
 ## R6 active method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
 \preformatted{get(columns=NULL, keep_df=F, as.df=F, subset=NULL, doc_id=NULL, token_id=NULL, safe_copy=T)}
 \preformatted{get_meta(columns=NULL, keep_df=F, as.df=F, subset=NULL, doc_id=NULL, safe_copy=T)}
 }
-
 \examples{
 d = data.frame(text = c('Text one first sentence. Text one second sentence', 'Text two'),
                medium = c('A','B'),

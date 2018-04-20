@@ -6,12 +6,16 @@
 #'
 #' @param x main input. can be a character (or factor) vector where each value is a full text, or a data.frame that has a column that contains full texts.
 #' @param meta A data.frame with document meta information (e.g., date, source). The rows of the data.frame need to match the values of x
-#' @param split_sentences Logical. If TRUE, the sentence number of tokens is also computed.
+#' @param udpipe_model Optionally, the name of a udpipe language model (e.g., "english", "dutch", "german"), to use the udpipe package to perform natural language processing. On first use, the model will be downloaded to the location specified in the udpipe_model_path argument. By default, dependency parsing (see use_parser argument) is turned off.
+#' @param split_sentences Logical. If TRUE, the sentence number of tokens is also computed. (only if udpipe_model is not used)
 #' @param max_tokens An integer. Limits the number of tokens per document to the specified number
+#' @param max_sentences An integer. Limits the number of sentences per document to the specified number. If set when split_sentences == FALSE, split_sentences will be set to TRUE.
 #' @param doc_id if x is a character/factor vector, doc_id can be used to specify document ids. This has to be a vector of the same length as x
 #' @param doc_column If x is a data.frame, this specifies the column with the document ids.
 #' @param text_columns if x is a data.frame, this specifies the column(s) that contains text. The texts are paste together in the order specified here.
-#' @param max_sentences An integer. Limits the number of sentences per document to the specified number. If set when split_sentences == FALSE, split_sentences will be set to TRUE.
+#' @param udpipe_model_path If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. If no path is given, the directory in which corpustool was installed will be used (see \link{resources_path}). You can also change the default with \link{set_resources_path}.
+#' @param use_parser If TRUE, use dependency parser (only if udpipe_model is used)
+#' @param remember_spaces If TRUE, a column with spaces after each token is included. Enables correct reconstruction of original text and keeps annotations at the level of character positions (e.g., brat) intact.
 #' @param verbose If TRUE, report progress
 #' @param ... not used
 #'
@@ -40,7 +44,9 @@ create_tcorpus <- function(x, ...) {
 #'                     meta = meta)
 #' tc
 #' @export
-create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, verbose=F, ...) {
+create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getOption('corpustools_resources', NULL), use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
+  space = NULL; misc = NULL ## data.table bindings
+
   if (any(duplicated(doc_id))) stop('doc_id should not contain duplicate values')
   if (!is.null(meta)){
     if (!methods::is(meta, 'data.frame')) stop('"meta" is not a data.frame or data.table')
@@ -53,8 +59,20 @@ create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, split_sen
   }
   meta$doc_id = as.character(meta$doc_id) ## prevent factors, which are unnecessary here and can only lead to conflicting levels with the doc_id in data
 
-  tCorpus$new(data = data.table::data.table(tokenize_to_dataframe(x, doc_id=doc_id, split_sentences=split_sentences, max_sentences=max_sentences, max_tokens=max_tokens, verbose=verbose)),
-              meta = base::droplevels(meta))
+  if (!is.null(udpipe_model)) {
+    data = udpipe_parse(x, udpipe_model, udpipe_model_path, doc_id=doc_id, use_parser=use_parser, max_sentences=max_sentences, max_tokens=max_tokens, verbose=verbose)
+    if (remember_spaces) {
+      levels(data$misc) = c(levels(data$misc), " ")
+      data$misc[is.na(data$misc)] = " "
+      data[, space := fast_factor(gsub('Space[s]?After=', '', misc))]
+      levels(data$space) = ifelse(levels(data$space) == 'No', '', levels(data$space))
+      levels(data$space) = double_to_single_slash(levels(data$space))
+    }
+    data$misc = NULL
+  } else {
+    data = tokenize_to_dataframe(x, doc_id=doc_id, split_sentences=split_sentences, max_sentences=max_sentences, max_tokens=max_tokens, remember_spaces=remember_spaces, verbose=verbose)
+  }
+  tCorpus$new(tokens = data, meta = base::droplevels(meta))
 }
 
 #' @rdname create_tcorpus
@@ -66,8 +84,8 @@ create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, split_sen
 #' tc = create_tcorpus(text)
 #' tc$get()
 #' @export
-create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, verbose=F, ...) {
-  create_tcorpus(as.character(x), doc_id=doc_id, meta=meta, split_sentences=split_sentences, max_sentences=max_sentences, max_tokens=max_tokens, verbose=verbose)
+create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getOption('corpustools_resources', NULL), use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
+  create_tcorpus(as.character(x), doc_id=doc_id, meta=meta, udpipe_model=udpipe_model, split_sentences=split_sentences, max_sentences=max_sentences, max_tokens=max_tokens, udpipe_model_path=udpipe_model_path, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
 }
 
 
@@ -95,7 +113,7 @@ create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, split_senten
 #' ## (note that text from different columns is pasted together with a double newline in between)
 #' tc$read_text(doc_id = '#1')
 #' @export
-create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id', split_sentences=F, max_sentences=NULL, max_tokens=NULL, ...) {
+create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id', udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getOption('corpustools_resources', NULL), use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
   for(cname in text_columns) if (!cname %in% colnames(x)) stop(sprintf('text_column "%s" not in data.frame', cname))
 
   if (length(text_columns) > 1){
@@ -112,7 +130,7 @@ create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id
   create_tcorpus(text,
                  doc_id = doc_id,
                  meta = x[,!colnames(x) %in% c(text_columns, doc_column), drop=F],
-                 split_sentences = split_sentences, max_sentences = max_sentences, max_tokens = max_tokens)
+                 udpipe_model=udpipe_model, split_sentences = split_sentences, max_sentences = max_sentences, max_tokens = max_tokens, udpipe_model_path=udpipe_model_path, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
 }
 
 #' Create a tcorpus based on tokens (i.e. preprocessed texts)
@@ -121,6 +139,11 @@ create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id
 #' @param doc_col The name of the column that contains the document ids/names
 #' @param token_id_col The name of the column that contains the positions of tokens. If NULL, it is assumed that the data.frame is ordered by the order of tokens and does not contain gaps (e.g., filtered out tokens)
 #' @param sentence_col Optionally, the name of the column that indicates the sentences in which tokens occured.
+#' @param token_col Optionally, the name of the column that contains the token text
+#' @param lemma_col Optionally, the name of the column that contains the lemma of the token
+#' @param pos_col Optionally, the name of the column that contains the part-of-speech tag of the token
+#' @param relation_col Optionally, the name of the column that contains the relation of the token to its parent
+#' @param parent_col Optionally, the name of the column that contains the id of the parent
 #' @param meta Optionally, a data.frame with document meta data. Needs to contain a column with the document ids (with the same name)
 #' @param meta_cols Alternatively, if there are document meta columns in the tokens data.table, meta_cols can be used to recognized them. Note that these values have to be unique within documents.
 #' @param feature_cols Optionally, specify which columns to include in the tcorpus. If NULL, all column are included (except the specified columns for documents, sentences and positions)
@@ -139,7 +162,7 @@ create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id
 #'                        sentence_col = 'sentence', token_id_col = 'id', meta=meta)
 #' tc
 #' @export
-tokens_to_tcorpus <- function(tokens, doc_col='doc_id', token_id_col='token_id', sentence_col='sentence', meta=NULL, meta_cols=NULL, feature_cols=NULL, sent_is_local=T, token_is_local=T) {
+tokens_to_tcorpus <- function(tokens, doc_col='doc_id', token_id_col='token_id', sentence_col='sentence', token_col=NULL, lemma_col=NULL, pos_col=NULL, relation_col=NULL, parent_col=NULL, meta=NULL, meta_cols=NULL, feature_cols=NULL, sent_is_local=T, token_is_local=T) {
   tokens = data.table::as.data.table(tokens)
   sentence = token_id = NULL ## used in data.table syntax, but need to have bindings for R CMD check
 
@@ -192,15 +215,16 @@ tokens_to_tcorpus <- function(tokens, doc_col='doc_id', token_id_col='token_id',
   ## make sure that sentence and token_id are locally unique within documents
   ndoc = nrow(unique(tokens, by='doc_id'))
   if (!is.null(sentence_col)){
-    if (sent_is_local) {
-        #if (ndoc > 10) if (!anyDuplicated(unique(tokens, by=c('doc_id','sentence')), by='sentence') == 0) warning("Sentence positions (sentence) do not appear to be locally unique within documents (no duplicates in at least 10 documents). Unless you are sure they are, set sent_is_local to FALSE (and read documentation)")
-    }
+    #if (sent_is_local) {
+    #    #if (ndoc > 10) if (!anyDuplicated(unique(tokens, by=c('doc_id','sentence')), by='sentence') == 0) warning("Sentence positions (sentence) do not appear to be locally unique within documents (no duplicates in at least 10 documents). Unless you are sure they are, set sent_is_local to FALSE (and read documentation)")
+    #}
     if (!sent_is_local) tokens[,'sentence' := local_position(tokens$sentence, tokens$doc_id, presorted = T)] ## make sure sentences are locally unique within documents (and not globally)
     if (!token_is_local) tokens[,'token_id' := global_position(tokens$token_id,
                                                             global_position(tokens$sentence, tokens$doc_id, presorted = T, position_is_local=T),
                                                             presorted = T)]  ## make token positions globally unique, taking sentence id into account (in case tokens are locally unique within sentences)
   }
   if (token_is_local) {
+    if (!anyDuplicated(tokens, by=c('doc_id','token_id')) == 0) warning("Duplicate token ids (doc_id - token_id pairs) found. If token ids are not local at the document level, you can set token_is_local to False to use a token's position within a document as the token ids")
     #if (ndoc > 10) if (!anyDuplicated(tokens, by=c('doc_id','token_id')) == 0) warning("token positions (token_id) do not appear to be locally unique within documents (no duplicates in at least 10 documents). Unless you are sure they are, set token_is_local to FALSE (and read documentation)")
   } else {
     tokens[,'token_id' := local_position(tokens$token_id, tokens$doc_id, presorted=T)] ## make tokens locally unique within documents
@@ -227,7 +251,9 @@ tokens_to_tcorpus <- function(tokens, doc_col='doc_id', token_id_col='token_id',
   }
   meta$doc_id = as.character(meta$doc_id) ## prevent factors, which are unnecessary here and can only lead to conflicting levels with the doc_id in data
 
-  tCorpus$new(data=tokens, meta = meta)
+  tc = tCorpus$new(tokens=tokens, meta = meta)
+  tc$set_special(token=token_col, lemma=lemma_col, POS=pos_col, relation=relation_col, parent=parent_col)
+  tc
 }
 
 ## alternative:: add formal data check and correction methods, and then simply create the tcorpus from the data and then perform the checks and corrections

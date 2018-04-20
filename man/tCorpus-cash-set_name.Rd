@@ -12,16 +12,14 @@
 \item{newname}{the new column name}
 }
 \description{
-Change column names of data and meta data
+\strong{Usage:}
 }
-\section{Usage}{
-
+\details{
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
 \preformatted{set_name(oldname, newname)}
 \preformatted{set_meta_name(oldname, newname)}
 }
-
 \examples{
 tc = create_tcorpus(sotu_texts, doc_column = 'id')
 
