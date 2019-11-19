@@ -22,14 +22,14 @@ is.featureHits <- function(fh, ...) {
 
 #' S3 print for featureHits class
 #'
-#' @param x a featureHits object, as returned by \link{tCorpus$search_features}
+#' @param x a featureHits object, as returned by \link{search_features}
 #' @param ... not used
 #'
 #' @method print featureHits
 #' @examples
 #' text = c('A B C', 'D E F. G H I', 'A D', 'GGG')
 #' tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = TRUE)
-#' hits = tc$search_features(c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
+#' hits = search_features(tc, c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
 #'
 #' hits
 #' @export
@@ -44,14 +44,14 @@ print.featureHits <- function(x, ...){
 
 #' S3 summary for featureHits class
 #'
-#' @param object a featureHits object, as returned by \link{tCorpus$search_features}
+#' @param object a featureHits object, as returned by \link{search_features}
 #' @param ... not used
 #'
 #' @method summary featureHits
 #' @examples
 #' text = c('A B C', 'D E F. G H I', 'A D', 'GGG')
 #' tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = TRUE)
-#' hits = tc$search_features(c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
+#' hits = search_features(tc, c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
 #'
 #' summary(hits)
 #' @export
@@ -97,14 +97,14 @@ is.contextHits <- function(ch, ...) {
 
 #' S3 print for contextHits class
 #'
-#' @param x a contextHits object, as returned by \link{tCorpus$search_contexts}
+#' @param x a contextHits object, as returned by \link{search_contexts}
 #' @param ... not used
 #'
 #' @method print contextHits
 #' @examples
 #' text = c('A B C', 'D E F. G H I', 'A D', 'GGG')
 #' tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = TRUE)
-#' hits = tc$search_contexts(c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
+#' hits = search_contexts(tc, c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
 #'
 #' hits
 #' @export
@@ -118,14 +118,14 @@ print.contextHits <- function(x, ...){
 
 #' S3 summary for contextHits class
 #'
-#' @param object a contextHits object, as returned by \link{tCorpus$search_contexts}
+#' @param object a contextHits object, as returned by \link{search_contexts}
 #' @param ... not used
 #'
 #' @method summary contextHits
 #' @examples
 #' text = c('A B C', 'D E F. G H I', 'A D', 'GGG')
 #' tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = TRUE)
-#' hits = tc$search_contexts(c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
+#' hits = search_contexts(tc, c('query label# A AND B', 'second query# (A AND Q) OR ("D E") OR I'))
 #'
 #' summary(hits)
 #' @export
@@ -146,4 +146,74 @@ summary.contextHits <- function(object, ...){
   as.data.frame(object)
 }
 
+#' S3 plot for contextHits class
+#'
+#' @param x a contextHits object, as returned by \link{search_contexts}
+#' @param min_weight      Optionally, the minimum weight for an edge in the network
+#' @param backbone_alpha  Optionally, the alpha threshold for backbone extraction (similar to a p-value, and lower is more strict)
+#' @param ... not used
+#'
+#' @method plot contextHits
+#' @examples
+#' tc = create_tcorpus(sotu_texts, doc_column='id')
+#' hits = search_contexts(tc, c('War# war* OR army OR bomb*','Terrorism# terroris*',
+#'                               'Economy# econom* OR bank*','Education# educat* OR school*'))
+#'
+#' \donttest{
+#' plot(hits)
+#' }
+#' @export
+plot.contextHits <- function(x, min_weight=0, backbone_alpha=NA, ...){
+  invisible(plot_associations(x, measure='cosine', min_weight=min_weight, backbone_alpha=backbone_alpha, ...))
+}
 
+#' S3 plot for featureHits class
+#'
+#' @param x a featureHits object, as returned by \link{search_features}
+#' @param min_weight      Optionally, the minimum weight for an edge in the network
+#' @param backbone_alpha  Optionally, the alpha threshold for backbone extraction (similar to a p-value, and lower is more strict)
+#' @param ... not used
+#'
+#' @method plot featureHits
+#' @examples
+#' tc = create_tcorpus(sotu_texts, doc_column='id')
+#' hits = search_features(tc, c('War# war* OR army OR bomb*','Terrorism# terroris*',
+#'                               'Economy# econom* OR bank*','Education# educat* OR school*'))
+#' \donttest{
+#' plot(hits)
+#' }
+#' @export
+plot.featureHits <- function(x, min_weight=0, backbone_alpha=NA, ...){
+  invisible(plot_associations(x, measure='cosine', min_weight=min_weight, backbone_alpha=backbone_alpha, ...))
+}
+
+plot_associations <- function(hits, min_weight=0, backbone_alpha=NA, measure=c('con_prob','con_prob_weighted','cosine','count_directed','count_undirected','chi'), context_level=c('document','sentence'), n=c('documents','sentences','hits'), ...) {
+  if (!methods::is(hits, 'featureHits') && !methods::is(hits, 'contextHits')) stop('hits has to be a featureHits or contextHits object')
+  if (methods::is(hits, 'contextHits') && n=='hits') stop('count cannot be "hits" for contextHits results')
+  measure = match.arg(measure)
+  context_level = match.arg(context_level)
+
+  g = semnet(hits, measure = 'con_prob_weighted', backbone = !is.na(backbone_alpha))
+
+  n = match.arg(n)
+  totalhits = summary(hits)
+  if (context_level == 'sentence' && !'sentences' %in% colnames(totalhits)) stop('Cannot use context_level = "sentence" if the queried tcorpus does not have sentence information')
+  if (n == 'sentences' && !'sentences' %in% colnames(totalhits)) stop('Cannot use n = "sentences" if the queried tcorpus does not have sentence information')
+  igraph::V(g)$freq = totalhits[match(igraph::V(g)$name, totalhits$code), n]
+  igraph::V(g)$name = paste0(igraph::V(g)$name, '\n(', igraph::V(g)$freq, ')')
+
+  #igraph::V(g)$color = substr(grDevices::rainbow(nrow(totalhits), s=0.4,alpha=0.5), 1,7)
+
+  size = igraph::V(g)$freq
+  size = (size / max(size))*100
+  size[size < 3] = 3
+  igraph::V(g)$size = size
+
+  if (!measure %in% c('cosine','count_undirected')) {
+    igraph::E(g)$curved=0.3
+    e = igraph::get.edges(g, igraph::E(g))
+    #igraph::E(g)$color = substr(grDevices::rainbow(nrow(totalhits), s=0.25,alpha=0.25), 1,7)[e[,1]]
+    igraph::E(g)$arrow.size=1
+  }
+  invisible(plot_semnet(g, vertexcolor_attr = 'color', vertexsize_attr='freq', max_backbone_alpha=backbone_alpha))
+}

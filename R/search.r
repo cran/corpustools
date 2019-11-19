@@ -1,5 +1,10 @@
-recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode = c('unique_hits','features','contexts'), parent_relation='', all_case_sensitive=FALSE, all_ghost=FALSE, all_flag_query=list(), keep_longest=TRUE, as_ascii=F, level=1) {
+
+
+
+recursive_search <- function(tc, qlist, lookup_tables=NULL, subcontext=NULL, feature='token', mode = c('unique_hits','features','contexts'), parent_relation='', all_case_sensitive=FALSE, all_ghost=FALSE, all_flag_query=list(), keep_longest=TRUE, as_ascii=F, level=1) {
   .ghost = NULL; .term_i = NULL; .seq_i = NULL; .group_i = NULL ## for solving CMD check notes (data.table syntax causes "no visible binding" message)
+
+
 
   mode = match.arg(mode) ## 'unique_hit' created complete and unique sets of hits (needed for counting) but doesn't assign all features
   ## 'features' mode does not make full sets of hits, but returns all features for which the query is true (needed for coding/dictionaries)
@@ -15,11 +20,15 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
   qlist = collapse_or_queries(qlist)
 
   nterms = length(qlist$terms)
+
   for (j in 1:nterms) {
     q = qlist$terms[[j]]
     is_nested = 'terms' %in% names(q)
     if (is_nested) {
-      jhits = recursive_search(tc, q, subcontext=subcontext, feature=feature, mode=mode, parent_relation=qlist$relation, all_case_sensitive, all_ghost, all_flag_query, keep_longest, as_ascii, level=level+1)
+
+
+      jhits = recursive_search(tc, q, lookup_tables=lookup_tables, subcontext=subcontext, feature=feature, mode=mode, parent_relation=qlist$relation, all_case_sensitive, all_ghost, all_flag_query, keep_longest, as_ascii, level=level+1)
+
       if (nterms == 1) {
         if (level == 1 && mode == 'contexts' & !is.null(jhits)) jhits = unique(subset(jhits, select=c('doc_id',subcontext)))
         return(jhits)
@@ -30,6 +39,7 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
         if (qlist$relation %in% c('proximity','sequence','AND')) jhits[, .group_i := paste(j, .group_i, sep='_')] ## for keeping track of nested multi word queries
       }
     } else {
+      #st = Sys.time()
       ## add alternative for OR statements, where all terms are combined into single term for more efficient regex
       .case_sensitive = q$case_sensitive | all_case_sensitive
       .ghost = q$ghost | all_ghost
@@ -38,11 +48,22 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
       for (n in names(all_flag_query)) flag_query[[n]] = unique(c(flag_query[[n]], all_flag_query[[n]]))
 
       only_context = mode == 'contexts' && qlist$relation %in% c('AND','NOT')  ## only for AND and NOT, because proximity and sequence require feature positions (and OR can be nested in them)
-      jhits = tc$lookup(q$term, feature=feature, ignore_case=!.case_sensitive, sub_query=flag_query, only_context=only_context, subcontext=subcontext, as_ascii=as_ascii)
+
+
+      if (!is.null(lookup_tables)) {
+        #lookup_table_key = sprintf('%s; ignore_case=%s; as_ascii=%s', feature, !.case_sensitive, as_ascii)
+        lookup_table_key = create_lookup_table_key(feature, !.case_sensitive, as_ascii)
+        lookup_table = lookup_tables[[lookup_table_key]]
+      } else lookup_table = NULL  ## if NULL, lookup_table will be created within tc$lookup, but providing one can be faster
+
+      jhits = tc$lookup(q$term, lookup_table=lookup_table,
+                        feature=feature, ignore_case=!.case_sensitive, sub_query=flag_query, only_context=only_context, subcontext=subcontext, as_ascii=as_ascii)
+
       if (!is.null(jhits)) {
         jhits[, .ghost := .ghost]
         if (qlist$relation %in% c('proximity','sequence','AND')) jhits[,.group_i := paste0(j, '_')] else jhits[,.group_i := ''] ## for keeping track of nested multi word queries
       }
+      #print(as.numeric(difftime(Sys.time(), st, units = 'secs')))
     }
     if (is.null(jhits)) {
       if (qlist$relation %in% c('AND','proximity','sequence')) return(NULL)
@@ -59,6 +80,7 @@ recursive_search <- function(tc, qlist, subcontext=NULL, feature='token', mode =
 
   feature_mode = mode == 'features'
   if (parent_relation %in% c('AND','proximity','sequence')) feature_mode = TRUE ## with these parents, hit_id will be recalculated, and all valid features should be returned
+
 
   if (qlist$relation %in% c('AND')) get_AND_hit(hits, n_unique = nterms, subcontext=subcontext, group_i = '.group_i', replace = '.ghost', feature_mode=feature_mode) ## assign hit_ids to groups of tokens within the same context
   if (qlist$relation %in% c('NOT')) get_AND_hit(hits, n_unique = nterms, subcontext=subcontext, group_i = '.group_i', replace = '.ghost', feature_mode=T)
@@ -83,7 +105,7 @@ collapse_or_queries <- function(qlist) {
   if (qlist$relation == 'OR') {
     nested = sapply(qlist$terms, function(x) 'terms' %in% names(x))
     has_flag_query = sapply(qlist$terms, function(x) length(x$flag_query) > 0)
-    select = !nested && !has_flag_query # these terms are collapse-able
+    select = !nested & !has_flag_query # these terms are collapse-able
 
     if (sum(select) > 1) {
       terms = sapply(qlist$terms[select], function(x) x[c('case_sensitive','ghost','term')], simplify = F)
@@ -130,6 +152,7 @@ get_sequence_hit <- function(d, seq_length, subcontext=NULL){
   hit_id = NULL ## used in data.table syntax, but need to have bindings for R CMD check
   setorderv(d, c('doc_id', 'token_id', '.term_i'))
   if (!is.null(subcontext)) subcontext = d[[subcontext]]
+
   .hit_id = sequence_hit_ids_cpp(as.numeric(d[['doc_id']]), as.numeric(subcontext), as.numeric(d[['token_id']]), as.numeric(d[['.term_i']]), seq_length)
   d[,hit_id := .hit_id]
 }

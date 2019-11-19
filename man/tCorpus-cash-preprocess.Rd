@@ -46,10 +46,10 @@
 ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 
 \preformatted{
-preprocess(column, new_column = column,
-           lowercase = T, ngrams = 1, ngram_context=c('document', 'sentence'),
-           as_ascii = F, remove_punctuation = T, remove_stopwords = F, use_stemming = F,
-           language = 'english')
+preprocess(column='token', new_column='feature', lowercase=T, ngrams=1,
+           ngram_context=c('document', 'sentence'), as_ascii=F, remove_punctuation=T,
+           remove_stopwords=F, remove_numbers=F, use_stemming=F, language='english',
+           min_freq=NULL, min_docfreq=NULL, max_freq=NULL, max_docfreq=NULL, min_char=NULL, max_char=NULL)
            }
 }
 \examples{
@@ -67,5 +67,5 @@ tc$preprocess('token', 'preprocessed_3', min_freq=2)
 ## make ngrams
 tc$preprocess('token', 'preprocessed_4', ngrams = 3)
 
-tc$get()
+tc$tokens
 }

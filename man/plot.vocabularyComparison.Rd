@@ -4,8 +4,9 @@
 \alias{plot.vocabularyComparison}
 \title{visualize vocabularyComparison}
 \usage{
-\method{plot}{vocabularyComparison}(x, n = 25, mode = c("both", "ratio_x",
-  "ratio_y"), balance = T, size = c("chi2", "freq", "ratio"), ...)
+\method{plot}{vocabularyComparison}(x, n = 25, mode = c("both",
+  "ratio_x", "ratio_y"), balance = T, size = c("chi2", "freq",
+  "ratio"), ...)
 }
 \arguments{
 \item{x}{a vocabularyComparison object, created with the \link{compare_corpus} or \link{compare_subset} method}
@@ -28,7 +29,7 @@ visualize vocabularyComparison
 tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
 comp = tc$compare_subset('token', query_x = 'tax*')
 
-\dontrun{
+\donttest{
 plot(comp, balance=T)
 plot(comp, mode = 'ratio_x')
 plot(comp, mode = 'ratio_y')

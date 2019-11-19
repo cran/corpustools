@@ -5,7 +5,20 @@
 
 #' tCorpus: a corpus class for tokenized texts
 #'
-#' @section Working with the tCorpus:
+#' The tCorpus is a class for managing tokenized texts, stored as a data.frame in which each row represents a token, and columns contain the positions and features of these tokens.
+#'
+#' @section Methods and Functions:
+#'
+#' The corpustools package uses both functions and methods for working with the tCorpus.
+#'
+#' Methods are used for all operations that modify the tCorpus itself, such as subsetting or adding columns.
+#' This allows the data to be \link[=tCorpus_modify_by_reference]{modified by reference}.
+#' Methods are accessed using the dollar sign after the tCorpus object. For example, if the tCorpus is named tc, the subset method can be called as tc$subset(...)
+#'
+#' Functions are used for all operations that return a certain output, such as search results or a semantic network.
+#' These are used in the common R style that you know and love. For example, if the tCorpus is named tc, a semantic network can be created with semnet(tc, ...)
+#'
+#' @section Overview of methods and functions:
 #'
 #' The primary goal of the tCorpus is to facilitate various corpus analysis techniques. The documentation for currently implemented techniques can be reached through the following links.
 #' \tabular{ll}{
@@ -37,21 +50,25 @@ NULL
 #' @name tCorpus_create
 NULL
 
-#' Methods for viewing, modifying and subsetting tCorpus data
+#' Methods and functions for viewing, modifying and subsetting tCorpus data
 #'
 #' \link[=tCorpus]{(back to overview)}
 #'
 #' \strong{Get data}
 #' \tabular{ll}{
-#'   \link[=tCorpus$get]{$get()} \tab Get token data, with the possibility to select columns and subset  \cr
-#'   \link[=tCorpus$get]{$get_meta()} \tab Get meta data, with the possibility to select columns and subset  \cr
-#'   \link[=tCorpus$dtm]{$dtm()} \tab Create a document term matrix \cr
+#'   \link[=tCorpus$get]{$get()} \tab Get (by default deep copy) token data, with the possibility to select columns and subset.
+#'                                    Instead of copying you can also access the token data with tc$tokens \cr
+#'   \link[=tCorpus$get]{$get_meta()} \tab Get meta data, with the possibility to select columns and subset. Like tokens, you can also
+#'                                   access meta data with tc$meta  \cr
+#'   \link[=get_dtm]{get_dtm()} \tab Create a document term matrix \cr
+#'   \link[=get_dfm]{get_dfm()} \tab Create a document term matrix, using the Quanteda dfm format \cr
 #'   \link[=tCorpus$context]{$context()} \tab Get a context vector. Currently supports documents or globally unique sentences.
 #' }
 #'
 #' \strong{Modify}
 #'
 #' The token and meta data can be modified with the set* and delete* methods. All modifications are performed by reference.
+#'
 #'
 #' \tabular{ll}{
 #'   \link[=tCorpus$set]{$set()} \tab Modify the token data by setting the values of one (existing or new) column. \cr
@@ -71,15 +88,16 @@ NULL
 #'
 #' \strong{Subsetting, merging/adding}
 #' \tabular{ll}{
-#'   \link[=tCorpus$subset]{$subset()} \tab Modify the token and/or meta data using the \link{tCorpus$subset} function. A subset expression can be specified for both the token data (subset) and the document meta data (subset_meta). \cr
-#'   \link[=tCorpus$subset]{$subset_meta()} \tab For consistency with other *_meta methods \cr
-#'   \link[=tCorpus$subset_query]{$subset_query()} \tab Subset the tCorpus based on a query, as used in \link[=tCorpus$search_contexts]{$search_contexts}
+#'   \link[=subset]{subset()} \tab Modify the token and/or meta data using the \link{subset} function. A subset expression can be specified for both the token data (subset) and the document meta data (subset_meta). \cr
+#'   \link[=subset_query]{subset_query()} \tab  Subset the tCorpus based on a query, as used in \link[=search_contexts]{search_contexts} \cr
+#'   \link[=tCorpus$subset]{$subset()} \tab Like subset, but as an R6 method that changes the tCorpus by reference \cr
+#'   \link[=tCorpus$subset_query]{$subset_query()} \tab Like subset_query, but as an R6 method that changes the tCorpus by reference
 #' }
 #'
 #'
 #' \strong{Fields}
 #'
-#' For the sake of convenience, the number of rows and column names of the data and meta data.tables can be accessed directly. This is also faster and more memory efficient than using nrows() and colnames() on the data and meta fields, because those have to copy the data.tables.
+#' For the sake of convenience, the number of rows and column names of the data and meta data.tables can be accessed directly.
 #'
 #' \tabular{ll}{
 #'   $n \tab The number of tokens (i.e. rows in the data) \cr
@@ -97,9 +115,9 @@ NULL
 #' \link[=tCorpus]{(back to overview)}
 #'
 #' If any tCorpus method is used that changes the corpus (e.g., set, subset),
-#' the change is made by reference. This is very convenient when working with a large
+#' the change is made by reference. This is convenient when working with a large
 #' corpus, because it means that the corpus does not have to be copied when changes are made,
-#' which is slow and memory inefficient.
+#' which is slower and less memory efficient.
 #'
 #' To illustrate, for a tCorpus object named `tc`, the subset method can be called like this:
 #'
@@ -119,21 +137,24 @@ NULL
 #'
 #' In this case, tc2 does contain the subsetted corpus, but tc itself will also be subsetted!!
 #'
-#' We force this approach on you, because it is faster and more memory efficient, which becomes
-#' crucial for large corpora. If you do want to make a copy, it has to be done explicitly with the
-#' copy() method.
+#' Using the R6 method for subset forces this approach on you, because it is faster and more memory efficient.
+#' If you do want to make a copy, there are several solutions.
 #'
-#' \strong{tc2 = tc$copy()}
+#' Firstly, for some methods we provide identical functions. For example, instead of the $subset() R6 method,
+#' we can use the subset() function.
 #'
-#' For methods where copying is often usefull, such as subset, there is also a copy parameter.
+#' \strong{tc2 = subset(tc, doc_id \%in\% selection)}
+#'
+#' We promise that only the R6 methods (called as tc$method()) will change the data by reference.
+#'
+#' A second option is that R6 methods where copying is often usefull have copy parameter
+#' Modifying by reference only happens in the R6 methods
 #'
 #' \strong{tc2 = tc$subset(doc_id \%in\% selection, copy=TRUE)}
 #'
-#' Now, tc will not be subsetted itself, but will subset a copy of itself and return it to be assigned to tc2.
+#' Finally, you can always make a deep copy of the entire tCorpus before modifying it, using the $copy() method.
 #'
-#' Note that tc is also modified by reference if the subset method (or any other method that modified the corpus)
-#' is called within a function. No matter where and how you call the method, tc itself will be subsetted unless you
-#' explicitly copy it first or set copy to True.
+#' \strong{tc2 = tc$copy()}
 #'
 #' @name tCorpus_modify_by_reference
 NULL
@@ -149,8 +170,8 @@ NULL
 #' }
 #' \strong{Inspect features}
 #' \tabular{ll}{
-#'   \link[=tCorpus$feature_stats]{$feature_stats()} \tab Create a data.frame with feature statistics \cr
-#'   \link[=tCorpus$top_features]{$top_features()} \tab Show top features, optionally grouped by a given factor
+#'   \link[=feature_stats]{feature_stats()} \tab Create a data.frame with feature statistics \cr
+#'   \link[=top_features]{top_features()} \tab Show top features, optionally grouped by a given factor
 #' }
 #'
 #' @name tCorpus_features
@@ -162,15 +183,16 @@ NULL
 #'
 #' \strong{Feature-level queries}
 #' \tabular{ll}{
-#'   \link[=tCorpus$search_features]{$search_features())} \tab Search for features based on keywords and conditions \cr
+#'   \link[=search_features]{search_features())} \tab Search for features based on keywords and conditions \cr
 #'   \link[=tCorpus$code_features]{$code_features())} \tab  Add a column to the token data based on feature search results \cr
 #'   \link[=tCorpus$search_recode]{$search_recode()} \tab Use the search_features query syntax to recode features \cr
-#'   \link[=tCorpus$feature_associations]{$feature_associations()} \tab Given a query, get words that often co-occur nearby \cr
-#'   \link[=tCorpus$kwic]{$kwic()} \tab Get keyword-in-context (kwic) strings
+#'   \link[=feature_associations]{feature_associations()} \tab Given a query, get words that often co-occur nearby \cr
+#'   \link[=get_kwic]{kwic()} \tab Get keyword-in-context (kwic) strings \cr
+#'   \link[=browse_hits]{browse_hits()} \tab Create full-text browsers with highlighted search hits
 #' }
 #' \strong{Context-level queries}
 #' \tabular{ll}{
-#'   \link[=tCorpus$search_contexts]{$search_contexts()} \tab Search for documents or sentences using Lucene-like queries \cr
+#'   \link[=search_contexts]{search_contexts()} \tab Search for documents or sentences using Lucene-like queries \cr
 #'   \link[=tCorpus$subset_query]{$subset_query()} \tab use the search_contexts query syntax to subset the tCorpus
 #' }
 #'
@@ -183,8 +205,8 @@ NULL
 #'
 #' \strong{Create networks}
 #' \tabular{ll}{
-#'   \link[=tCorpus$semnet]{$semnet)} \tab Feature co-occurrence within contexts (documents, sentences) \cr
-#'   \link[=tCorpus$semnet_window]{$semnet_window()} \tab Feature co-occurrence within a specified token distance
+#'   \link[=semnet]{semnet)} \tab Feature co-occurrence within contexts (documents, sentences) \cr
+#'   \link[=semnet_window]{semnet_window()} \tab Feature co-occurrence within a specified token distance
 #' }
 #' \strong{Support functions for analyzing and visualizing the semantic network}
 #' \tabular{ll}{
@@ -201,8 +223,8 @@ NULL
 #'
 #' \strong{Compare vocabulary of two corpora}
 #' \tabular{ll}{
-#'   \link[=tCorpus$compare_corpus]{$compare_corpus()} \tab Compare vocabulary of one tCorpus to another \cr
-#'   \link[=tCorpus$compare_subset]{$compare_subset()} \tab Compare subset of a tCorpus to the rest of the tCorpus
+#'   \link[=compare_corpus]{compare_corpus()} \tab Compare vocabulary of one tCorpus to another \cr
+#'   \link[=compare_subset]{compare_subset()} \tab Compare subset of a tCorpus to the rest of the tCorpus
 #' }
 #'
 #' @name tCorpus_compare
@@ -226,7 +248,7 @@ NULL
 #'
 #' \strong{Compare documents, and perform similarity based deduplication}
 #' \tabular{ll}{
-#'   \link[=tCorpus$compare_documents]{$compare_documents()} \tab Compare documents \cr
+#'   \link[=compare_documents]{compare_documents()} \tab Compare documents \cr
 #'   \link[=tCorpus$deduplicate]{$deduplicate()} \tab Remove duplicate documents
 #' }
 #'

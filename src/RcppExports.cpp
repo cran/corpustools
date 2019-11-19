@@ -20,7 +20,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // uncollapse_terms_cpp
-std::map<std::string,std::vector<std::string> > uncollapse_terms_cpp(std::vector<std::string>& term, std::string sep);
+std::map<std::string,std::vector<std::string>> uncollapse_terms_cpp(std::vector<std::string>& term, std::string sep);
 RcppExport SEXP _corpustools_uncollapse_terms_cpp(SEXP termSEXP, SEXP sepSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

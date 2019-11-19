@@ -13,6 +13,7 @@
 #' @param random.y if TRUE, the y position of words is random, otherwise it represents the word frequency.
 #' @param xlim Starting value of x axis
 #' @param ylim Starting value of y axis
+#' @param col  A vector of colors that is passed to colorRamp to interpolate colors over x axis
 #' @param ... additional parameters passed to the plot function
 #'
 #' @return nothing
@@ -21,12 +22,12 @@
 #' y = c(0, 2, 5, 10)
 #' words = c('words', 'where', 'you', 'like')
 #'
-#' \dontrun{
+#' \donttest{
 #' plot_words(x,y,words, c(1,2,3,4))
 #' }
 #' @export
-plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', ylab='', yaxt='n', scale=2, random.y=T, xlim=NULL, ylim=NULL, ...){
-  wordsize = rescale_var(wordfreq, 0.75, scale) + 1
+plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', ylab='', yaxt='n', scale=1, random.y=T, xlim=NULL, ylim=NULL, col=c('darkred','navyblue'), ...){
+  wordsize = rescale_var(wordfreq, 0.25, scale) + 1
   if (is.null(y) && random.y) y = sample(seq(-1, 1, by = 0.001), length(x))
   if (is.null(y) && !random.y) y = wordsize
   xmargin = (max(x) - min(x)) * 0.2
@@ -36,7 +37,10 @@ plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', yl
   graphics::plot(x, y, type = "n", xlim = xlim, ylim = ylim, frame.plot = F, yaxt = yaxt, ylab = ylab, xlab = xlab, ...)
   wl <- as.data.frame(wordcloud::wordlayout(x, y, words, cex = wordsize))
 
-  graphics::text(wl$x + 0.5 * wl$width, wl$y + 0.5 * wl$ht, words, cex = wordsize, ...)
+  cramp = grDevices::colorRamp(col)
+  col = cramp(rescale_var(wl$x, 0, 1))
+  col = grDevices::rgb(col[,1], col[,2], col[3,], maxColorValue=255, alpha=255)
+  graphics::text(wl$x + 0.5 * wl$width, wl$y + 0.5 * wl$ht, words, cex = wordsize, col=col, ...)
 }
 
 #' Plot a word cloud from a dtm
@@ -59,16 +63,16 @@ plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', yl
 #' ## create DTM
 #' tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
 #' tc$preprocess('token', 'feature', remove_stopwords = TRUE)
-#' dtm = tc$dtm('feature')
+#' dtm = get_dtm(tc, 'feature')
 #'
-#' \dontrun{
+#' \donttest{
 #' dtm_wordcloud(dtm, nterms = 20)
 #'
 #' ## or without a DTM
 #' dtm_wordcloud(terms = c('in','the','cloud'), freqs = c(2,5,10))
 #' }
 #' @export
-dtm_wordcloud <- function(dtm=NULL, nterms=100, freq.fun=NULL, terms=NULL, freqs=NULL, scale=c(6, .5), min.freq=1, rot.per=.15, ...) {
+dtm_wordcloud <- function(dtm=NULL, nterms=100, freq.fun=NULL, terms=NULL, freqs=NULL, scale=c(4, .5), min.freq=1, rot.per=.15, ...) {
   if (!is.null(dtm)) {
     t = dtm_term_statistics(dtm)
     t = t[order(t$termfreq, decreasing=T), ]
@@ -82,12 +86,13 @@ dtm_wordcloud <- function(dtm=NULL, nterms=100, freq.fun=NULL, terms=NULL, freqs
     terms = terms[select]
     freqs = freqs[select]
   }
+
+
   if (is.null(terms) | is.null(freqs)) stop("Please provide dtm or terms and freqs")
   wordcloud::wordcloud(terms, freqs,
                         scale=scale, min.freq=min.freq, max.words=Inf, random.order=FALSE,
                         rot.per=rot.per, ...)
 }
-
 
 #' visualize vocabularyComparison
 #'
@@ -103,13 +108,14 @@ dtm_wordcloud <- function(dtm=NULL, nterms=100, freq.fun=NULL, terms=NULL, freqs
 #' tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
 #' comp = tc$compare_subset('token', query_x = 'tax*')
 #'
-#' \dontrun{
+#' \donttest{
 #' plot(comp, balance=T)
 #' plot(comp, mode = 'ratio_x')
 #' plot(comp, mode = 'ratio_y')
 #' }
 #' @export
 plot.vocabularyComparison <- function(x, n=25, mode=c('both', 'ratio_x','ratio_y'), balance=T, size = c('chi2','freq','ratio'), ...){
+  #if (!methods::is(x, 'vocabularyComparison')) stop('x has to be a vocabularyComparison object')
   mode = match.arg(mode)
   size = match.arg(size)
 
@@ -131,4 +137,34 @@ plot.vocabularyComparison <- function(x, n=25, mode=c('both', 'ratio_x','ratio_y
   if (mode == 'both') plot_words(x = log(x$ratio), words=x$feature, wordfreq = wsize, ...)
 }
 
+#' visualize feature associations
+#'
+#' @param x a featureAssociations object, created with the \link{feature_associations} function
+#' @param n the number of words in the plot
+#' @param size use "freq", "chi2" or "ratio" for determining the size of words
+#' @param ... additional arguments passed to dtm_wordcloud
+#'
+#' @examples
+#' ## as example, compare SOTU paragraphs about taxes to rest
+#' tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
+#' comp = tc$compare_subset('token', query_x = 'tax*')
+#'
+#' \donttest{
+#' plot(comp, balance=T)
+#' plot(comp, mode = 'ratio_x')
+#' plot(comp, mode = 'ratio_y')
+#' }
+#' @export
+plot.featureAssociations <- function(x, n=25, size = c('chi2','freq','ratio'), ...){
+  size = match.arg(size)
+  x = x[x$ratio > 1,]
+  x = x[order(-x$chi2),]
+  x = head(x, n)
+
+  if (size == 'freq') wsize = relfreqmean = ((x$freq.x / sum(x$freq.x)) + (x$freq.y / sum(x$freq.y))) / 2
+  if (size == 'ratio') wsize = x$ratio
+  if (size == 'chi2') wsize = x$chi2
+
+  dtm_wordcloud(terms=x$feature, freqs=wsize, ...)
+}
 

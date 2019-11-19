@@ -6,14 +6,20 @@
 #'
 #' @param x main input. can be a character (or factor) vector where each value is a full text, or a data.frame that has a column that contains full texts.
 #' @param meta A data.frame with document meta information (e.g., date, source). The rows of the data.frame need to match the values of x
-#' @param udpipe_model Optionally, the name of a udpipe language model (e.g., "english", "dutch", "german"), to use the udpipe package to perform natural language processing. On first use, the model will be downloaded to the location specified in the udpipe_model_path argument. By default, dependency parsing (see use_parser argument) is turned off.
+#' @param udpipe_model Optionally, the name of a Universal Dependencies language model (e.g., "english-ewt", "dutch-alpino"), to use the udpipe package
+#'                     (\code{\link[udpipe]{udpipe_annotate}}) for natural language processing. You can use \code{\link{show_udpipe_models}} to get
+#'                     an overview of the available models. For more information about udpipe and performance benchmarks of the UD models, see the
+#'                     GitHub page of the \href{https://github.com/bnosac/udpipe}{udpipe package}.
 #' @param split_sentences Logical. If TRUE, the sentence number of tokens is also computed. (only if udpipe_model is not used)
 #' @param max_tokens An integer. Limits the number of tokens per document to the specified number
 #' @param max_sentences An integer. Limits the number of sentences per document to the specified number. If set when split_sentences == FALSE, split_sentences will be set to TRUE.
 #' @param doc_id if x is a character/factor vector, doc_id can be used to specify document ids. This has to be a vector of the same length as x
 #' @param doc_column If x is a data.frame, this specifies the column with the document ids.
 #' @param text_columns if x is a data.frame, this specifies the column(s) that contains text. The texts are paste together in the order specified here.
-#' @param udpipe_model_path If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. If no path is given, the directory in which corpustool was installed will be used (see \link{resources_path}). You can also change the default with \link{set_resources_path}.
+#' @param udpipe_model_path If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. Defaults to working directory
+#' @param udpipe_cache      The number of persistent caches to keep for inputs of udpipe. The caches store tokens per batch (100 documents).
+#'                          This way, if a lot of data has to be parsed, or if R crashes, udpipe can continue from the latest batch instead of start over.
+#'                          The caches are stored in the udpipe_models folder (in udpipe_model_path). Only the most recent [udpipe_caches] caches will be stored.
 #' @param use_parser If TRUE, use dependency parser (only if udpipe_model is used)
 #' @param remember_spaces If TRUE, a column with spaces after each token is included. Enables correct reconstruction of original text and keeps annotations at the level of character positions (e.g., brat) intact.
 #' @param verbose If TRUE, report progress
@@ -22,7 +28,7 @@
 #' @export
 #' @name create_tcorpus
 #' @examples
-#'
+#' ## ...
 create_tcorpus <- function(x, ...) {
   UseMethod('create_tcorpus')
 }
@@ -30,11 +36,11 @@ create_tcorpus <- function(x, ...) {
 #' @rdname create_tcorpus
 #' @examples
 #' tc = create_tcorpus(c('Text one first sentence. Text one second sentence', 'Text two'))
-#' tc$get()
+#' tc$tokens
 #'
 #' tc = create_tcorpus(c('Text one first sentence. Text one second sentence', 'Text two'),
 #'                     split_sentences = TRUE)
-#' tc$get()
+#' tc$tokens
 #'
 #' ## with meta (easier to S3 method for data.frame)
 #' meta = data.frame(doc_id = c(1,2), source = c('a','b'))
@@ -44,7 +50,7 @@ create_tcorpus <- function(x, ...) {
 #'                     meta = meta)
 #' tc
 #' @export
-create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getOption('corpustools_resources', NULL), use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
+create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getwd(), udpipe_cache=3, use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
   space = NULL; misc = NULL ## data.table bindings
 
   if (any(duplicated(doc_id))) stop('doc_id should not contain duplicate values')
@@ -60,7 +66,7 @@ create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, udpipe_mo
   meta$doc_id = as.character(meta$doc_id) ## prevent factors, which are unnecessary here and can only lead to conflicting levels with the doc_id in data
 
   if (!is.null(udpipe_model)) {
-    data = udpipe_parse(x, udpipe_model, udpipe_model_path, doc_id=doc_id, use_parser=use_parser, max_sentences=max_sentences, max_tokens=max_tokens, verbose=verbose)
+    data = udpipe_parse(x, udpipe_model, udpipe_model_path, cache=udpipe_cache, doc_id=doc_id, use_parser=use_parser, max_sentences=max_sentences, max_tokens=max_tokens, verbose=verbose)
     if (remember_spaces) {
       levels(data$misc) = c(levels(data$misc), " ")
       data$misc[is.na(data$misc)] = " "
@@ -82,10 +88,10 @@ create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, udpipe_mo
 #' ##  method for a character vector.
 #' text = factor(c('Text one first sentence', 'Text one second sentence'))
 #' tc = create_tcorpus(text)
-#' tc$get()
+#' tc$tokens
 #' @export
-create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getOption('corpustools_resources', NULL), use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
-  create_tcorpus(as.character(x), doc_id=doc_id, meta=meta, udpipe_model=udpipe_model, split_sentences=split_sentences, max_sentences=max_sentences, max_tokens=max_tokens, udpipe_model_path=udpipe_model_path, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
+create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getwd(), udpipe_cache=3, use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
+  create_tcorpus(as.character(x), doc_id=doc_id, meta=meta, udpipe_model=udpipe_model, split_sentences=split_sentences, max_sentences=max_sentences, max_tokens=max_tokens, udpipe_model_path=udpipe_model_path, udpipe_cache=udpipe_cache, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
 }
 
 
@@ -98,7 +104,7 @@ create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model
 #'
 #' tc = create_tcorpus(d, split_sentences = TRUE)
 #' tc
-#' tc$get()
+#' tc$tokens
 #'
 #' ## use multiple text columns
 #' d$headline = c('Head one', 'Head two', 'Head three')
@@ -108,12 +114,9 @@ create_tcorpus.factor <- function(x, doc_id=1:length(x), meta=NULL, udpipe_model
 #' tc = create_tcorpus(d, text_columns = c('headline','text'), doc_column = 'doc_id',
 #'                     split_sentences = TRUE)
 #' tc
-#' tc$get()
-#'
-#' ## (note that text from different columns is pasted together with a double newline in between)
-#' tc$read_text(doc_id = '#1')
+#' tc$tokens
 #' @export
-create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id', udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getOption('corpustools_resources', NULL), use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
+create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id', udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getwd(), udpipe_cache=3, use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
   for(cname in text_columns) if (!cname %in% colnames(x)) stop(sprintf('text_column "%s" not in data.frame', cname))
 
   if (length(text_columns) > 1){
@@ -130,7 +133,7 @@ create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id
   create_tcorpus(text,
                  doc_id = doc_id,
                  meta = x[,!colnames(x) %in% c(text_columns, doc_column), drop=F],
-                 udpipe_model=udpipe_model, split_sentences = split_sentences, max_sentences = max_sentences, max_tokens = max_tokens, udpipe_model_path=udpipe_model_path, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
+                 udpipe_model=udpipe_model, split_sentences = split_sentences, max_sentences = max_sentences, max_tokens = max_tokens, udpipe_model_path=udpipe_model_path, udpipe_cache=udpipe_cache, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
 }
 
 #' Create a tcorpus based on tokens (i.e. preprocessed texts)
@@ -256,5 +259,7 @@ tokens_to_tcorpus <- function(tokens, doc_col='doc_id', token_id_col='token_id',
   tc
 }
 
+
 ## alternative:: add formal data check and correction methods, and then simply create the tcorpus from the data and then perform the checks and corrections
+
 

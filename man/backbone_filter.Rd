@@ -4,8 +4,9 @@
 \alias{backbone_filter}
 \title{Extract the backbone of a network.}
 \usage{
-backbone_filter(g, alpha = 0.05, direction = "none", delete_isolates = T,
-  max_vertices = NULL, use_original_alpha = T, k_is_n = F)
+backbone_filter(g, alpha = 0.05, direction = "none",
+  delete_isolates = T, max_vertices = NULL, use_original_alpha = T,
+  k_is_n = F)
 }
 \arguments{
 \item{g}{A graph in the `Igraph` format.}
@@ -29,11 +30,11 @@ A graph in the Igraph format
 Based on the following paper: Serrano, M. A., Boguna, M., & Vespignani, A. (2009). Extracting the multiscale backbone of complex weighted networks. Proceedings of the National Academy of Sciences, 106(16), 6483-6488.
 }
 \examples{
-\dontrun{
+\donttest{
 tc = create_tcorpus(sotu_texts, doc_column = 'id')
 tc$preprocess('token','feature', remove_stopwords = TRUE, use_stemming = TRUE, min_docfreq = 10)
 
-g = tc$semnet_window('feature', window.size = 10)
+g = semnet_window(tc, 'feature', window.size = 10)
 igraph::vcount(g)
 igraph::ecount(g)
 gb = backbone_filter(g, max_vertices = 100)

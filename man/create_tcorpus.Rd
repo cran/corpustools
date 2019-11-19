@@ -9,21 +9,22 @@
 \usage{
 create_tcorpus(x, ...)
 
-\method{create_tcorpus}{character}(x, doc_id = 1:length(x), meta = NULL,
-  udpipe_model = NULL, split_sentences = F, max_sentences = NULL,
-  max_tokens = NULL, udpipe_model_path = getOption("corpustools_resources",
-  NULL), use_parser = F, remember_spaces = FALSE, verbose = T, ...)
+\method{create_tcorpus}{character}(x, doc_id = 1:length(x),
+  meta = NULL, udpipe_model = NULL, split_sentences = F,
+  max_sentences = NULL, max_tokens = NULL,
+  udpipe_model_path = getwd(), udpipe_cache = 3, use_parser = F,
+  remember_spaces = FALSE, verbose = T, ...)
 
 \method{create_tcorpus}{factor}(x, doc_id = 1:length(x), meta = NULL,
   udpipe_model = NULL, split_sentences = F, max_sentences = NULL,
-  max_tokens = NULL, udpipe_model_path = getOption("corpustools_resources",
-  NULL), use_parser = F, remember_spaces = FALSE, verbose = T, ...)
+  max_tokens = NULL, udpipe_model_path = getwd(), udpipe_cache = 3,
+  use_parser = F, remember_spaces = FALSE, verbose = T, ...)
 
 \method{create_tcorpus}{data.frame}(x, text_columns = "text",
   doc_column = "doc_id", udpipe_model = NULL, split_sentences = F,
   max_sentences = NULL, max_tokens = NULL,
-  udpipe_model_path = getOption("corpustools_resources", NULL),
-  use_parser = F, remember_spaces = FALSE, verbose = T, ...)
+  udpipe_model_path = getwd(), udpipe_cache = 3, use_parser = F,
+  remember_spaces = FALSE, verbose = T, ...)
 }
 \arguments{
 \item{x}{main input. can be a character (or factor) vector where each value is a full text, or a data.frame that has a column that contains full texts.}
@@ -34,7 +35,10 @@ create_tcorpus(x, ...)
 
 \item{meta}{A data.frame with document meta information (e.g., date, source). The rows of the data.frame need to match the values of x}
 
-\item{udpipe_model}{Optionally, the name of a udpipe language model (e.g., "english", "dutch", "german"), to use the udpipe package to perform natural language processing. On first use, the model will be downloaded to the location specified in the udpipe_model_path argument. By default, dependency parsing (see use_parser argument) is turned off.}
+\item{udpipe_model}{Optionally, the name of a Universal Dependencies language model (e.g., "english-ewt", "dutch-alpino"), to use the udpipe package
+(\code{\link[udpipe]{udpipe_annotate}}) for natural language processing. You can use \code{\link{show_udpipe_models}} to get
+an overview of the available models. For more information about udpipe and performance benchmarks of the UD models, see the
+GitHub page of the \href{https://github.com/bnosac/udpipe}{udpipe package}.}
 
 \item{split_sentences}{Logical. If TRUE, the sentence number of tokens is also computed. (only if udpipe_model is not used)}
 
@@ -42,7 +46,11 @@ create_tcorpus(x, ...)
 
 \item{max_tokens}{An integer. Limits the number of tokens per document to the specified number}
 
-\item{udpipe_model_path}{If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. If no path is given, the directory in which corpustool was installed will be used (see \link{resources_path}). You can also change the default with \link{set_resources_path}.}
+\item{udpipe_model_path}{If udpipe_model is used, this path wil be used to look for the model, and if the model doesn't yet exist it will be downloaded to this location. Defaults to working directory}
+
+\item{udpipe_cache}{The number of persistent caches to keep for inputs of udpipe. The caches store tokens per batch (100 documents).
+This way, if a lot of data has to be parsed, or if R crashes, udpipe can continue from the latest batch instead of start over.
+The caches are stored in the udpipe_models folder (in udpipe_model_path). Only the most recent [udpipe_caches] caches will be stored.}
 
 \item{use_parser}{If TRUE, use dependency parser (only if udpipe_model is used)}
 
@@ -58,13 +66,13 @@ create_tcorpus(x, ...)
 Create a \link{tCorpus} from raw text input
 }
 \examples{
-
+## ...
 tc = create_tcorpus(c('Text one first sentence. Text one second sentence', 'Text two'))
-tc$get()
+tc$tokens
 
 tc = create_tcorpus(c('Text one first sentence. Text one second sentence', 'Text two'),
                     split_sentences = TRUE)
-tc$get()
+tc$tokens
 
 ## with meta (easier to S3 method for data.frame)
 meta = data.frame(doc_id = c(1,2), source = c('a','b'))
@@ -78,7 +86,7 @@ tc
 ##  method for a character vector.
 text = factor(c('Text one first sentence', 'Text one second sentence'))
 tc = create_tcorpus(text)
-tc$get()
+tc$tokens
 d = data.frame(text = c('Text one first sentence. Text one second sentence.',
                'Text two', 'Text three'),
                date = c('2010-01-01','2010-01-01','2012-01-01'),
@@ -86,7 +94,7 @@ d = data.frame(text = c('Text one first sentence. Text one second sentence.',
 
 tc = create_tcorpus(d, split_sentences = TRUE)
 tc
-tc$get()
+tc$tokens
 
 ## use multiple text columns
 d$headline = c('Head one', 'Head two', 'Head three')
@@ -96,8 +104,5 @@ d$doc_id = c('#1', '#2', '#3')
 tc = create_tcorpus(d, text_columns = c('headline','text'), doc_column = 'doc_id',
                     split_sentences = TRUE)
 tc
-tc$get()
-
-## (note that text from different columns is pasted together with a double newline in between)
-tc$read_text(doc_id = '#1')
+tc$tokens
 }

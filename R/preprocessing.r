@@ -5,10 +5,10 @@
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
 #' \preformatted{
-#' preprocess(column, new_column = column,
-#'            lowercase = T, ngrams = 1, ngram_context=c('document', 'sentence'),
-#'            as_ascii = F, remove_punctuation = T, remove_stopwords = F, use_stemming = F,
-#'            language = 'english')
+#' preprocess(column='token', new_column='feature', lowercase=T, ngrams=1,
+#'            ngram_context=c('document', 'sentence'), as_ascii=F, remove_punctuation=T,
+#'            remove_stopwords=F, remove_numbers=F, use_stemming=F, language='english',
+#'            min_freq=NULL, min_docfreq=NULL, max_freq=NULL, max_docfreq=NULL, min_char=NULL, max_char=NULL)
 #'            }
 #'
 #' @param column the column containing the feature to be used as the input
@@ -46,7 +46,7 @@
 #' ## make ngrams
 #' tc$preprocess('token', 'preprocessed_4', ngrams = 3)
 #'
-#' tc$get()
+#' tc$tokens
 tCorpus$set('public', 'preprocess', function(column='token', new_column='feature', lowercase=T, ngrams=1, ngram_context=c('document', 'sentence'), as_ascii=F, remove_punctuation=T, remove_stopwords=F, remove_numbers=F, use_stemming=F, language='english', min_freq=NULL, min_docfreq=NULL, max_freq=NULL, max_docfreq=NULL, min_char=NULL, max_char=NULL) {
   column = match.arg(column, self$names)
   invisible(preprocess_feature(self, column=column, new_column=new_column, lowercase=lowercase, ngrams=ngrams, ngram_context=ngram_context, as_ascii=as_ascii, remove_punctuation=remove_punctuation, remove_stopwords=remove_stopwords, remove_numbers=remove_numbers, use_stemming=use_stemming, language=language, min_freq=min_freq, min_docfreq=min_docfreq, max_freq=max_freq, max_docfreq=max_docfreq, min_char=min_char, max_char=max_char))
@@ -66,8 +66,14 @@ tCorpus$set('public', 'preprocess', function(column='token', new_column='feature
 #' \preformatted{feature_subset(column, new_column, subset)}
 #'
 #' @param column the column containing the feature to be used as the input
-#' @param new_column the column to save the filtered feature. Can be a new column or overwrite an existing one.
 #' @param subset logical expression indicating rows to keep in the tokens data. i.e. rows for which the logical expression is FALSE will be set to NA.
+#' @param new_column the column to save the filtered feature. Can be a new column or overwrite an existing one.
+#' @param min_freq an integer, specifying minimum token frequency.
+#' @param min_docfreq an integer, specifying minimum document frequency.
+#' @param max_freq an integer, specifying minimum token frequency.
+#' @param max_docfreq an integer, specifying minimum document frequency.
+#' @param min_char an integer, specifying minimum characters in a token
+#' @param max_char an integer, specifying maximum characters in a token
 #'
 #' @name tCorpus$feature_subset
 #' @aliases feature_subset
@@ -77,8 +83,8 @@ tCorpus$set('public', 'preprocess', function(column='token', new_column='feature
 #' tc$feature_subset('token', 'tokens_subset1', subset = token_id < 5)
 #' tc$feature_subset('token', 'tokens_subset2', subset = freq_filter(token, min = 3))
 #'
-#' tc$get()
-tCorpus$set('public', 'feature_subset', function(column, new_column=column, subset, inverse=F, copy=F){
+#' tc$tokens
+tCorpus$set('public', 'feature_subset', function(column, subset=NULL, new_column=column, inverse=F, min_freq=NULL, min_docfreq=NULL, max_freq=NULL, max_docfreq=NULL, min_char=NULL, max_char=NULL, copy=F){
   column = match.arg(column, self$names)
   if (new_column %in% c('doc_id','sentence','token_id')) stop('The position columns (doc_id, sent_i, token_i) cannot be used')
   if (class(substitute(subset)) %in% c('call', 'name')) subset = self$eval(substitute(subset), parent.frame())
@@ -100,6 +106,12 @@ tCorpus$set('public', 'feature_subset', function(column, new_column=column, subs
     self$set(new_column, self$get(column), subset = .subset)
   }
 
+  if (!is.null(min_freq) || !is.null(max_freq) || !is.null(min_docfreq) || !is.null(max_docfreq) || !is.null(min_char) || !is.null(max_char)) {
+    self$preprocess(column=new_column, new_column=new_column, lowercase=F, remove_punctuation=F,
+                    min_freq=min_freq, max_freq=max_freq, min_docfreq=min_docfreq, max_docfreq=max_docfreq, min_char=min_char, max_char=max_char)
+  }
+
+  self$tokens[]
   invisible(self)
 })
 
@@ -116,12 +128,14 @@ preprocess_feature <- function(tc, column, new_column, lowercase=T, ngrams=1, ng
     .feature = preprocess_tokens(feature, context=context, language=language, use_stemming=use_stemming, lowercase=lowercase, ngrams = ngrams, as_ascii=as_ascii, remove_punctuation=remove_punctuation, remove_stopwords=remove_stopwords, remove_numbers=remove_numbers, min_freq=min_freq, min_docfreq=min_docfreq, max_freq=max_freq, max_docfreq=max_docfreq, min_char=min_char, max_char=max_char)
   }
   tc$set(column = new_column, value = .feature)
+  tc$tokens[]
+  tc
 }
 
 
 #' Preprocess tokens in a character vector
 #'
-#' @param x A character vector in which each element is a token (i.e. a tokenized text)
+#' @param x A character or factor vector in which each element is a token (i.e. a tokenized text)
 #' @param context Optionally, a character vector of the same length as x, specifying the context of token (e.g., document, sentence). Has to be given if ngram > 1
 #' @param language The language used for stemming and removing stopwords
 #' @param use_stemming Logical, use stemming. (Make sure the specify the right language!)
@@ -150,7 +164,8 @@ preprocess_feature <- function(tc, column, new_column, lowercase=T, ngrams=1, ng
 #' preprocess_tokens(tokens, remove_stopwords = TRUE, use_stemming = TRUE)
 #' preprocess_tokens(tokens, context = NA, ngrams = 3)
 #' @export
-preprocess_tokens <- function(x, context=NULL, language='english', use_stemming=F, lowercase=T, ngrams=1, replace_whitespace=T, as_ascii=F, remove_punctuation=T, remove_stopwords=F, remove_numbers=F, min_freq=NULL, min_docfreq=NULL, max_freq=NULL, max_docfreq=NULL, min_char=NULL, max_char=NULL, ngram_skip_empty=T){
+#' @return a factor vector
+preprocess_tokens <- function(x, context=NULL, language='english', use_stemming=F, lowercase=T, ngrams=1, replace_whitespace=F, as_ascii=F, remove_punctuation=T, remove_stopwords=F, remove_numbers=F, min_freq=NULL, min_docfreq=NULL, max_freq=NULL, max_docfreq=NULL, min_char=NULL, max_char=NULL, ngram_skip_empty=T){
   language = match.arg(language, choices=c('danish','dutch','english','finnish','french','german','hungarian','italian','norwegian','porter','portuguese','romanian','russian','spanish','swedish','turkish'))
   if (!methods::is(x, 'factor')) x = fast_factor(x)
   if (replace_whitespace) levels(x) = gsub(' ', '_', levels(x), fixed=T)
