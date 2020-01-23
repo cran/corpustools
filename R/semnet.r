@@ -30,7 +30,6 @@
 #' \donttest{plot_semnet(g)}
 semnet <- function(tc, feature='token', measure=c('con_prob', 'con_prob_weighted', 'cosine', 'count_directed', 'count_undirected', 'chi2'), context_level=c('document','sentence'), backbone=F, n.batches=NA){
   alpha = 2
-  require_package('igraph')
   measure = match.arg(measure)
   context_level = match.arg(context_level)
 
@@ -52,7 +51,7 @@ semnet <- function(tc, feature='token', measure=c('con_prob', 'con_prob_weighted
     tc = tokens_to_tcorpus(hits, doc_col = 'doc_id', sentence_col=NULL, token_id_col = 'token_id')
     feature = 'code'
   }
-  is_tcorpus(tc, T)
+  is_tcorpus(tc)
   feature = match.arg(feature, tc$feature_names)
 
   g = create_semnet(tc, feature, measure=measure, matrix_mode='dtm', context_level=context_level, n.batches=n.batches, alpha=alpha)
@@ -122,8 +121,6 @@ semnet <- function(tc, feature='token', measure=c('con_prob', 'con_prob_weighted
 #' igraph::get.data.frame(g)
 #' \donttest{plot_semnet(g)}
 semnet_window <- function(tc, feature='token', measure=c('con_prob', 'cosine', 'count_directed', 'count_undirected', 'chi2'), context_level=c('document','sentence'), window.size=10, direction='<>', backbone=F, n.batches=5, matrix_mode=c('positionXwindow', 'windowXwindow')){
-  require_package('igraph')
-
   measure = match.arg(measure)
   context_level = match.arg(context_level)
   matrix_mode = match.arg(matrix_mode)
@@ -137,7 +134,7 @@ semnet_window <- function(tc, feature='token', measure=c('con_prob', 'cosine', '
     tc = tokens_to_tcorpus(hits, doc_col = 'doc_id', sentence_col=NULL, token_id_col = 'token_id')
     feature = 'code'
   }
-  is_tcorpus(tc, T)
+  is_tcorpus(tc)
   feature = match.arg(feature, tc$feature_names)
 
 

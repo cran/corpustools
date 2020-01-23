@@ -162,18 +162,18 @@ queries = data.frame(label = c('War','Terrorism','Economy','Education'),
 hits = search_features(tc, query=queries$query, code=queries$label)
 
 ## ------------------------------------------------------------------------
-tc$aggregate(hits=hits)
-tc$aggregate(hits=hits, meta_cols = 'president')  ## break by meta variables
+count_tcorpus(tc, hits=hits)
+count_tcorpus(tc, hits=hits, meta_cols = 'president')  ## break by meta variables
 
 ## ---- fig.width = 6, fig.height = 3, fig.align="center", eval=F----------
 #  library(ggplot2)
 #  
-#  date_hits = tc$aggregate(hits, meta_cols='date', wide = F)
+#  date_hits = count_tcorpus(tc, hits, meta_cols='date', wide = F)
 #  
 #  ggplot(date_hits, aes(x=date, y=count, group=code)) +
 #    geom_line(aes(linetype=code))
 #  
-#  pres_hits = tc$aggregate(hits, meta_cols='president', wide = F)
+#  pres_hits = count_tcorpus(tc, hits, meta_cols='president', wide = F)
 #  
 #  ggplot(pres_hits, aes(president, count)) +
 #    geom_col(aes(fill=code), width=.5, position = "dodge")
@@ -215,10 +215,14 @@ tc$subset_query('war')
 ## ---- eval=F-------------------------------------------------------------
 #  library(quanteda)
 #  dict = quanteda::data_dictionary_LSD2015
+
+## ---- eval=F-------------------------------------------------------------
+#  tc = create_tcorpus(sotu_texts, doc_column = 'id', text_columns = 'text', split_sentences=T)
 #  hits = search_dictionary(tc, dict)
-#  
+
+## ---- eval=F-------------------------------------------------------------
 #  library(ggplot2)
-#  agg_hits = tc$aggregate('date', hits, wide = F)
+#  agg_hits = count_tcorpus(tc, 'date', hits, wide = F)
 #  ggplot(agg_hits, aes(x=date, y=count, group=code)) +
 #    geom_line(aes(linetype=code))
 
@@ -226,7 +230,28 @@ tc$subset_query('war')
 #  dict = melt_quanteda_dict(dict)
 #  dict$sentiment = ifelse(dict$code %in% c('positive','neg_negative'), 1, -1)
 #  tc$code_dictionary(dict)
+#  tc$tokens
+
+## ---- eval=F-------------------------------------------------------------
 #  browse_texts(tc, scale='sentiment')
+
+## ---- eval=F-------------------------------------------------------------
+#  agg_tcorpus(tc, sent = mean(sentiment), N = length(sentiment), .id = 'code_id')
+
+## ---- eval=F-------------------------------------------------------------
+#  agg_tcorpus(tc, sent = mean(sentiment), .id = 'code_id', by='president')
+#  agg_tcorpus(tc, sent = mean(sentiment), .id = 'code_id', by=c('token','president'))
+
+## ------------------------------------------------------------------------
+head(emoticon_dict)
+
+## ------------------------------------------------------------------------
+tc = create_tcorpus('yay :) :* happy')
+tc$tokens
+
+## ------------------------------------------------------------------------
+tc$replace_dictionary(emoticon_dict)
+tc$tokens
 
 ## ------------------------------------------------------------------------
 tc = create_tcorpus(sotu_texts, doc_col='id')

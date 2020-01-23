@@ -7,13 +7,15 @@
 # Some features can be grouped in categories that span over multiple rows. For instance, unique ids for named entities. This function groups these collocation categories, and collapses the features into collocation strings.
 # This can be used to count how often each collocation string occurs. Also, it is used in the add_collocation_label function to choosse labels for collocation categories based on the most frequent occurring string
 
+
+
 collocation_strings <- function(tc, colloc_id, feature='token', pref=NULL){
   f = tc$get(c(feature, colloc_id))
   colnames(f) = c('feature','id')
   f$pref = F
   f$pref[pref] = T
 
-  lag_id = shift(f$id, fill=as.factor(NA))
+  lag_id = data.table::shift(f$id, fill=as.factor(NA))
   f$new_id = !f$id == lag_id | (!is.na(f$id) & is.na(lag_id))
   f = f[!is.na(f$id),]
   f$new_id = cumsum(f$new_id)
@@ -40,7 +42,7 @@ add_collocation_label <- function(tc, colloc_id, feature='token', new_feature=sp
   .pref_subset = deparse(substitute(pref_subset))
   if (!pref_subset == 'NULL') pref = tc$get_token_id(subset_meta=.pref_subset) else pref = NULL
 
-  label = collocation_strings(tc, colloc_id, feature=feature, pref=pref) ## for shattered_tCorpus, this has to be done for the entire corpus first, or labels will not match across shards
+  label = collocation_strings(tc, colloc_id, feature=feature, pref=pref)
   ## select most frequent labels, prioritzing pref is true
   setkeyv(label, c('pref','N'))
   label = as.data.frame(label)[!duplicated(label$id, fromLast = T),]
@@ -55,10 +57,10 @@ add_collocation_label <- function(tc, colloc_id, feature='token', new_feature=sp
 
 ################## undo collocations
 
-flatten_collocations <- function(d, feature_col, position_col, sep='_', reset_key=T){
+flatten_collocations <- function(d, feature_col, position_col, sep=' |_', reset_key=T){
   ## position needs to be an integer (or at least shouldn not have decimals)
   if (reset_key) k = key(d)
-  fc = flatten_collocations_table(d[[feature_col]], d[[position_col]])
+  fc = flatten_collocations_table(d[[feature_col]], d[[position_col]], sep = sep)
 
   new_levels = setdiff(unique(fc$feature), levels(d))
   levels(d[[feature_col]]) = c(levels(d[[feature_col]]), new_levels)
@@ -84,7 +86,7 @@ flatten_collocations <- function(d, feature_col, position_col, sep='_', reset_ke
 }
 
 flatten_collocations_table <- function(feature, position, i=1:length(feature), sep=' |_'){
-  colloc = grep('_', feature)
+  colloc = grep(sep, feature)
   colloc_list = stringi::stri_split(feature[colloc], regex = sep)
   colloc = data.frame(i=i[colloc], feature=feature[colloc], position=position[colloc], n=sapply(colloc_list, length))
   flat_colloc = colloc[rep(1:nrow(colloc), colloc$n),]

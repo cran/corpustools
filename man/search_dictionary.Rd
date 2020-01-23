@@ -4,15 +4,15 @@
 \alias{search_dictionary}
 \title{Dictionary lookup}
 \usage{
-search_dictionary(tc, dict, token_col = "token", case_sensitive = F,
-  batchsize = 50000, flatten_colloc = T, ascii = F, low_memory = F,
-  verbose = F)
+search_dictionary(tc, dict, token_col = "token", string_col = "string",
+  code_col = "code", sep = " ", case_sensitive = F,
+  use_wildcards = T, flatten_colloc = T, ascii = F, verbose = F)
 }
 \arguments{
 \item{tc}{A tCorpus}
 
 \item{dict}{A dictionary. Can be either a data.frame or a quanteda dictionary. If a data.frame is given, it has to
-have a column named "string" that contains the dictionary terms, and a column "code" that contains the
+have a column named "string"  (or use string_col argument) that contains the dictionary terms, and a column "code" (or use code_col argument) that contains the
 label/code represented by this string. Each row has a single string, that can be
 a single word or a sequence of words seperated by a whitespace (e.g., "not bad"), and can have the common ? and * wildcards.
 If a quanteda dictionary is given, it is automatically converted to this type of data.frame with the
@@ -20,15 +20,22 @@ If a quanteda dictionary is given, it is automatically converted to this type of
 
 \item{token_col}{The feature in tc that contains the token text.}
 
+\item{string_col}{If dict is a data.frame, the name of the column in dict with the dictionary lookup string. Default is "string"}
+
+\item{code_col}{The name of the column in dict with the dictionary code/label. Default is "code".
+If dict is a quanteda dictionary with multiple levels, "code_l2", "code_l3", etc. can be used to select levels..}
+
+\item{sep}{A regular expression for separating multi-word lookup strings (default is " ", which is what quanteda dictionaries use).
+For example, if the dictionary contains "Barack Obama", sep should be " " so that it matches the consequtive tokens "Barack" and "Obama".
+In some dictionaries, however, it might say "Barack+Obama", so in that case sep = '\\+' should be used.}
+
 \item{case_sensitive}{logical, should lookup be case sensitive?}
 
-\item{batchsize}{Very large dictionaries will be matched in batches to prevent memory issues.}
+\item{use_wildcards}{Use the wildcards * (any number including none of any character) and ? (one or none of any character). If FALSE, exact string matching is used}
 
 \item{flatten_colloc}{If true, collocations in the tokens (rows in tc$tokens) will be considered separate words. For example, "President_Obama" will be split to "president" "obama", so that "president obama" in the dictionary matches correctly.}
 
 \item{ascii}{If true, convert text to ascii before matching}
-
-\item{low_memory}{if true, use slower but more memory efficient computation}
 
 \item{verbose}{If true, report progress}
 }
