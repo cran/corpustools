@@ -16,6 +16,7 @@
 #' @return a data.frame
 #' @export
 #' @examples
+#' \donttest{
 #' tc = create_tcorpus(sotu_texts, doc_column = 'id')
 #' tc$preprocess()
 #'
@@ -31,23 +32,21 @@
 #' hits = search_features(tc, '"war terror"~10')
 #' topf = feature_associations(tc, 'feature', hits = hits)
 #' head(topf, 20) ## frequent words close to the combination of "war" and "terror" within 10 words
+#' }
 feature_associations <- function(tc, feature, query=NULL, hits=NULL, query_feature='token', window=15,  n=25, min_freq=1, sort_by= c('chi2', 'ratio', 'freq'), subset=NULL, subset_meta=NULL, include_self=F) {
   if (is.null(query) & is.null(hits)) stop('either keyword or hits has to be specified')
   if (!is.null(query) & !is.null(hits)) stop('only keyword or hits can be specified')
   if (!is.null(query)) hits = search_features(tc, query, feature = query_feature, mode='features')
 
 
-  fa = feature_associations_fun(tc, hits=hits, feature=feature, window=window, n=n, min_freq=min_freq, sort_by=sort_by, subset=subset, subset_meta=subset_meta)
-  if (!include_self) {
-    feat = as.character(unique(tc$tokens[hits$hits, on=c('doc_id','token_id')][[feature]]))
-    fa = fa[!fa$feature %in% feat,]
-  }
+  fa = feature_associations_fun(tc, hits=hits, feature=feature, window=window, n=n, min_freq=min_freq, sort_by=sort_by, subset=subset, subset_meta=subset_meta, include_self=include_self)
+
   class(fa) = c('featureAssociations', 'data.frame')
   fa
 }
 
 
-feature_associations_fun <- function(tc, hits, feature='token', window=15,  n=25, min_freq=1, sort_by= c('chi2', 'ratio', 'freq'), subset=NULL, subset_meta=NULL) {
+feature_associations_fun <- function(tc, hits, feature='token', window=15,  n=25, min_freq=1, sort_by= c('chi2', 'ratio', 'freq'), subset=NULL, subset_meta=NULL, include_self=F) {
   if(methods::is(substitute(subset), 'call')) subset = tc$eval(substitute(subset), parent.frame())
   if(methods::is(substitute(subset_meta), 'call')) subset_meta = tc$eval_meta(substitute(subset_meta), parent.frame())
   sort_by = match.arg(sort_by)
@@ -63,6 +62,12 @@ feature_associations_fun <- function(tc, hits, feature='token', window=15,  n=25
   comp = comp[comp$freq.x > min_freq,]
   comp = comp[, c('feature','freq.x', 'freq.y', 'ratio','chi2')]
   colnames(comp) = c('feature','freq','freq_NOT', 'ratio', 'chi2')
+
+  if (!include_self) {
+    feat = as.character(unique(tc$tokens[hits$hits, on=c('doc_id','token_id')][[feature]]))
+    comp = comp[!comp$feature %in% feat,]
+  }
+
   ord = order(-comp[[sort_by]])
   comp[head(ord, n),]
 }

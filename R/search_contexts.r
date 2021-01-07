@@ -13,11 +13,13 @@
 #'
 #' \preformatted{subset_query(query, feature = 'token', context_level = c('document','sentence','window'))}
 #'
-#' @param query A character string that is a query. See \link{search_contexts} for query syntax.
+#' @param query   A character string that is a query. See \link{search_contexts} for query syntax.
 #' @param feature The name of the feature columns on which the query is used.
 #' @param context_level Select whether the query and subset are performed at the document or sentence level.
 #' @param window  If used, uses a word distance as the context (overrides context_level)
-#' @param copy    If true, return modified copy of data instead of subsetting the input tcorpus by reference.
+#' @param as_ascii if TRUE, perform search in ascii.
+#' @param not     If TRUE, perform a NOT search. Return the articles/sentences for which the query is not found.  
+#' @param copy    If TRUE, return modified copy of data instead of subsetting the input tcorpus by reference.
 #'
 #' @name tCorpus$subset_query
 #' @examples
@@ -35,27 +37,35 @@
 #' tc2$get_meta()
 #'
 #' tc$meta ## (unchanged)
-tCorpus$set('public', 'subset_query', function(query, feature='token', context_level=c('document','sentence'), window=NA, copy=F){
+tCorpus$set('public', 'subset_query', function(query, feature='token', context_level=c('document','sentence'), window=NA, not=F, as_ascii=F, copy=F){
   context_level = match.arg(context_level)
 
   if (!is.na(window)) {
-    hits = self$search_features(query, feature=feature, context_level=context_level, mode='features')
+    hits = search_features(self, query, feature=feature, context_level=context_level, as_ascii = as_ascii, mode='features')
     if (is.null(hits)) return(NULL)
     window = self$get_token_id(hits$hits$doc_id, hits$hits$token_id, window=window)
     out = self$subset(window, copy=copy)
   } else {
-    hits = search_contexts(self, query, feature=feature, context_level=context_level)
+    hits = search_contexts(self, query, feature=feature, context_level=context_level, as_ascii = as_ascii)
     if (is.null(hits)) return(NULL)
     if (context_level == 'document'){
       #self$select_meta_rows(self$get_meta('doc_id') %in% hits$hits$doc_id)
       .doc_ids = hits$hits$doc_id
-      out = self$subset(subset_meta= doc_id %in% .doc_ids, copy=copy)
+      if (not) 
+        out = self$subset(subset_meta= !doc_id %in% .doc_ids, copy=copy)
+      else 
+        out = self$subset(subset_meta= doc_id %in% .doc_ids, copy=copy)
     }
     if (context_level == 'sentence'){
       d = self$get(c('doc_id','sentence'), keep_df=T)
       d$i = 1:nrow(d)
       setkeyv(d, c('doc_id','sentence'))
-      .rows = d[list(hits$hits$doc_id, hits$hits$sentence),]$i
+      
+      if (not)
+        .rows = d[-d[list(hits$hits$doc_id, hits$hits$sentence),, which=T]]$i
+      else 
+        .rows = d[list(hits$hits$doc_id, hits$hits$sentence),]$i
+      
       #self$select_rows(rows)
       out = self$subset(subset=.rows, copy=copy)
     }
@@ -74,6 +84,7 @@ tCorpus$set('public', 'subset_query', function(query, feature='token', context_l
 #' @param feature The name of the feature column
 #' @param context_level Select whether the queries should occur within while "documents" or specific "sentences". Returns results at the specified level.
 #' @param as_ascii if TRUE, perform search in ascii.
+#' @param not     If TRUE, perform a NOT search. Return the articles/sentences for which the query is not found.  
 #' @param verbose If TRUE, progress messages will be printed
 #'
 #' @details
@@ -160,7 +171,8 @@ tCorpus$set('public', 'subset_query', function(query, feature='token', context_l
 #' search_contexts(tc, '"A B"~s')$hits   ## use ~s flag on everything between quotes
 #'
 #' }
-search_contexts <- function(tc, query, code=NULL, feature='token', context_level=c('document','sentence'), verbose=F, as_ascii=F){
+search_contexts <- function(tc, query, code=NULL, feature='token', context_level=c('document','sentence'), not=F, verbose=F, as_ascii=F){
+  
   is_tcorpus(tc)
   context_level = match.arg(context_level)
   if (!feature %in% tc$names) stop(sprintf('Feature (%s) is not available. Current options are: %s', feature, paste(tc$feature_names, collapse=', ')))
@@ -170,16 +182,23 @@ search_contexts <- function(tc, query, code=NULL, feature='token', context_level
   cols = if(context_level == 'sentence') c('doc_id','sentence') else c('doc_id')
   subcontext = if(context_level == 'sentence') 'sentence' else NULL
 
+  queries = parse_queries(query, feature = feature)
+  dict_results = get_dict_results(tc, queries, context_level, as_ascii, feature, verbose)
+  
   hits = vector('list', length(query))
-  lookup_tables = list()
   for (i in 1:length(query)) {
     if (verbose) print(code[i])
-    q = parse_query_cpp(as.character(query[i]))
-
-    lookup_tables = prepare_lookup_tables(tc, q, lookup_tables, feature = feature, as_ascii = as_ascii)
-
-    h = recursive_search(tc, q, lookup_tables, subcontext=subcontext, feature=feature, mode = 'contexts', as_ascii=as_ascii)
+    h = lucene_like(dict_results, queries$queries[[i]], mode='contexts', subcontext=subcontext)
+    
     if (!is.null(h)) {
+      if (not) {
+        if (context_level == 'document') h = data.table::data.table(doc_id = setdiff(tc$meta$doc_id, h$doc_id))
+        if (context_level == 'sentence') {
+          sents = unique(tc$get(c('doc_id','sentence')))    
+          h = sents[-sents[h, on=c('doc_id','sentence'), which=T]]
+        }
+      }
+      
       h[, code := codelabel[i]]
       hits[[i]] = h
     }

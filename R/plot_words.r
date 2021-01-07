@@ -14,6 +14,7 @@
 #' @param xlim Starting value of x axis
 #' @param ylim Starting value of y axis
 #' @param col  A vector of colors that is passed to colorRamp to interpolate colors over x axis
+#' @param fixed_col Optionally, a vector of the exact colors given to words.
 #' @param ... additional parameters passed to the plot function
 #'
 #' @return nothing
@@ -26,7 +27,7 @@
 #' plot_words(x,y,words, c(1,2,3,4))
 #' }
 #' @export
-plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', ylab='', yaxt='n', scale=1, random.y=T, xlim=NULL, ylim=NULL, col=c('darkred','navyblue'), ...){
+plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', ylab='', yaxt='n', scale=1, random.y=T, xlim=NULL, ylim=NULL, col=c('darkred','navyblue'), fixed_col=NULL, ...){
   wordsize = rescale_var(wordfreq, 0.25, scale) + 1
   if (is.null(y) && random.y) y = sample(seq(-1, 1, by = 0.001), length(x))
   if (is.null(y) && !random.y) y = wordsize
@@ -37,9 +38,14 @@ plot_words <- function(x, y=NULL, words, wordfreq=rep(1, length(x)), xlab='', yl
   graphics::plot(x, y, type = "n", xlim = xlim, ylim = ylim, frame.plot = F, yaxt = yaxt, ylab = ylab, xlab = xlab, ...)
   wl <- as.data.frame(wordcloud::wordlayout(x, y, words, cex = wordsize))
 
-  cramp = grDevices::colorRamp(col)
-  col = cramp(rescale_var(wl$x, 0, 1))
-  col = grDevices::rgb(col[,1], col[,2], col[3,], maxColorValue=255, alpha=255)
+  if (is.null(fixed_col)) {
+    cramp = grDevices::colorRamp(col)
+    col = cramp(rescale_var(wl$x, 0, 1))
+    col = grDevices::rgb(col[,1], col[,2], col[,3], maxColorValue=255, alpha=255)
+  } else {
+    col = fixed_col
+  }
+
   graphics::text(wl$x + 0.5 * wl$width, wl$y + 0.5 * wl$ht, words, cex = wordsize, col=col, ...)
 }
 
@@ -108,10 +114,10 @@ dtm_wordcloud <- function(dtm=NULL, nterms=100, freq.fun=NULL, terms=NULL, freqs
 #' @examples
 #' ## as example, compare SOTU paragraphs about taxes to rest
 #' tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
-#' comp = tc$compare_subset('token', query_x = 'tax*')
+#' comp = compare_subset(tc, 'token', query_x = 'tax*')
 #'
 #' \donttest{
-#' plot(comp, balance=T)
+#' plot(comp, balance=TRUE)
 #' plot(comp, mode = 'ratio_x')
 #' plot(comp, mode = 'ratio_y')
 #' }
@@ -149,10 +155,10 @@ plot.vocabularyComparison <- function(x, n=25, mode=c('both', 'ratio_x','ratio_y
 #' @examples
 #' ## as example, compare SOTU paragraphs about taxes to rest
 #' tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
-#' comp = tc$compare_subset('token', query_x = 'tax*')
+#' comp = compare_subset(tc, 'token', query_x = 'tax*')
 #'
 #' \donttest{
-#' plot(comp, balance=T)
+#' plot(comp, balance=TRUE)
 #' plot(comp, mode = 'ratio_x')
 #' plot(comp, mode = 'ratio_y')
 #' }

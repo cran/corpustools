@@ -4,9 +4,17 @@
 \alias{ego_semnet}
 \title{Create an ego network}
 \usage{
-ego_semnet(g, vertex_names, depth = 1, only_filter_vertices = T,
-  weight_attr = "weight", min_weight = NULL, top_edges = NULL,
-  max_edges_level = NULL, directed = c("out", "in"))
+ego_semnet(
+  g,
+  vertex_names,
+  depth = 1,
+  only_filter_vertices = T,
+  weight_attr = "weight",
+  min_weight = NULL,
+  top_edges = NULL,
+  max_edges_level = NULL,
+  directed = c("out", "in")
+)
 }
 \arguments{
 \item{g}{an igraph object}
@@ -35,7 +43,7 @@ The function is similar to the ego function in igraph, but with some notable dif
 }
 \examples{
 tc = create_tcorpus(c('a b c', 'd e f', 'a d'))
-g = tc$semnet('token')
+g = semnet(tc, 'token')
 
 igraph::get.data.frame(g)
 \donttest{plot_semnet(g)}

@@ -4,8 +4,7 @@
 \alias{plot.featureAssociations}
 \title{visualize feature associations}
 \usage{
-\method{plot}{featureAssociations}(x, n = 25, size = c("chi2", "freq",
-  "ratio"), ...)
+\method{plot}{featureAssociations}(x, n = 25, size = c("chi2", "freq", "ratio"), ...)
 }
 \arguments{
 \item{x}{a featureAssociations object, created with the \link{feature_associations} function}
@@ -22,10 +21,10 @@ visualize feature associations
 \examples{
 ## as example, compare SOTU paragraphs about taxes to rest
 tc = create_tcorpus(sotu_texts[1:100,], doc_column = 'id')
-comp = tc$compare_subset('token', query_x = 'tax*')
+comp = compare_subset(tc, 'token', query_x = 'tax*')
 
 \donttest{
-plot(comp, balance=T)
+plot(comp, balance=TRUE)
 plot(comp, mode = 'ratio_x')
 plot(comp, mode = 'ratio_y')
 }

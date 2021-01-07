@@ -4,12 +4,29 @@
 \alias{browse_texts}
 \title{Create and view a full text browser}
 \usage{
-browse_texts(tc, doc_ids = NULL, token_col = "token", n = 500,
-  select = c("first", "random"), header = "", subheader = NULL,
-  highlight = NULL, scale = NULL, category = NULL,
-  meta_cols = NULL, seed = NA, nav = NULL, top_nav = NULL,
-  thres_nav = 1, view = T, highlight_col = "yellow",
-  scale_col = c("red", "blue", "green"), filename = NULL)
+browse_texts(
+  tc,
+  doc_ids = NULL,
+  token_col = "token",
+  n = 500,
+  select = c("first", "random"),
+  header = "",
+  subheader = NULL,
+  highlight = NULL,
+  scale = NULL,
+  category = NULL,
+  rsyntax = NULL,
+  value = NULL,
+  meta_cols = NULL,
+  seed = NA,
+  nav = NULL,
+  top_nav = NULL,
+  thres_nav = 1,
+  view = T,
+  highlight_col = "yellow",
+  scale_col = c("red", "blue", "green"),
+  filename = NULL
+)
 }
 \arguments{
 \item{tc}{a tCorpus}
@@ -26,19 +43,24 @@ browse_texts(tc, doc_ids = NULL, token_col = "token", n = 500,
 
 \item{subheader}{Optionally, overwrite the subheader. By default the subheader reports the number of documents}
 
-\item{highlight}{The name of a numeric column in tc$tokens with values between 0 and 1, used to highlight tokens.
+\item{highlight}{Highlighe mode: provide the name of a numeric column in tc$tokens with values between 0 and 1, used to highlight tokens.
 Can also be a character vector, in which case al non-NA values are highlighted}
 
-\item{scale}{The name of a numeric column in tc$tokens with values between -1 and 1, used to color tokens on a scale (set colors with scale_col)}
+\item{scale}{Scale mode: provide the name of a numeric column in tc$tokens with values between -1 and 1, used to color tokens on a scale (set colors with scale_col)}
 
-\item{category}{The name of a character or factor column in tc$tokens. Each unique value will have its own color, and navigation for categories will be added (nav cannot be used with this option)}
+\item{category}{Category mode: provide the name of a character or factor column in tc$tokens. Each unique value will have its own color, and navigation for categories will be added (nav cannot be used with this option)}
+
+\item{rsyntax}{rsyntax mode: provide the name of an rsyntax annotation column (see \code{\link{annotate_rsyntax}})}
+
+\item{value}{rsyntax mode argument: if rsyntax mode is used, value can be a character vector with values in the rsyntax annotation column. 
+If used, only these values are fully colored, and the other (non NA) values only have border colors.}
 
 \item{meta_cols}{A character vector with names of columns in tc$meta, used to only show the selected columns}
 
 \item{seed}{If select is "random", seed can be used to set a random seed. After sampling the seed is re-initialized with set.seed(NULL).}
 
 \item{nav}{Optionally, a column in tc$meta to add navigation (only supports simple filtering on unique values).
-This is not possible if annotate is used.}
+This is not possible if category is used.}
 
 \item{top_nav}{A number. If navigation based on token annotations is used, filters will only apply to top x values with highest token occurence in a document}
 
@@ -61,16 +83,11 @@ Creates a static HTML file to view the texts in the tcorpus in full text mode.
 \examples{
 \donttest{
 tc = create_tcorpus(sotu_texts, doc_column='id')
-url = browse_texts(tc)
 
+queries = c('War# war soldier* weapon*',
+            'Economy# econom* market* tax*')
+tc$code_features(queries)
 
-## tokens can be highlighted, scaled or coloured for different categories
-## to validate analyses such as dictionaries, scaling and topic modeling
-tc = create_tcorpus(sotu_texts, doc_column = 'id', udpipe_model='english-ewt')
-tc$preprocess('lemma', 'feature', min_docfreq = 10)
-tc$feature_subset('feature', POS \%in\% c('NOUN','PROPN','VERB'))
-m = tc$lda_fit('feature', create_feature = 'topic', K = 5, alpha = 0.001)
-
-browse_texts(tc, category='topic', view=T, top_nav=1)
+browse_texts(tc, category='code')
 }
 }

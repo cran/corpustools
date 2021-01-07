@@ -1,6 +1,5 @@
 testthat::context('Search Contexts')
 
-
 test_that("Query document search works", {
   text = c('Renewable fuel is better than fossil fuels!',
            'A fueled debate about fuel',
@@ -8,18 +7,23 @@ test_that("Query document search works", {
            'Hey, A ~ symbol!! Can I match that?')
   tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = T)
 
-  hits = search_features(tc, '!')
-
   hits = search_contexts(tc, 'mark AND rutte')
   expect_equal(as.character(hits$hits$doc_id), 'c')
 
+  hits_not = search_contexts(tc, 'mark AND rutte', not=T)
+  expect_equal(as.character(hits_not$hits$doc_id), c('a','b','d'))
+  
   hits = search_contexts(tc, '"mark rutte"', context_level = 'sentence')
   expect_equal(hits$hits$sentence, 1)
+  
+  hits_not = search_contexts(tc, '"mark rutte"', context_level = 'sentence', not=T)
+  expect_equal(hits_not$hits$sentence, c(1,1,2,1,2))
 
   ## test context boundaries
   hits = search_contexts(tc, '"rutte bos"~5', context_level = 'document') ## should find rutte and bos across sentences
   expect_true(nrow(hits$hits) > 0)
 
+  
   hits = search_contexts(tc, '"rutte bos"~5', context_level = 'sentence') ## should not find rutte and bos across sentences
   expect_true(nrow(hits$hits) == 0)
 
@@ -66,7 +70,10 @@ test_that("Query document search works", {
 
   ## query subsetting
   tc = create_tcorpus(text, doc_id = c('a','b','c','d'), split_sentences = T)
-  tc_rutte = tc$subset_query('"mark rutte"~2', context_level = 'sentence')
+  tc_rutte = subset_query(tc, '"mark rutte"~2', context_level = 'sentence')
   expect_equal(tc_rutte$get_meta('doc_id'), 'c')
+  
+  tc_not_rutte = subset_query(tc, '"mark rutte"~2', context_level = 'sentence', not=T)
+  expect_equal(tc_not_rutte$get_meta('doc_id'), c('a','b','c','d'))
 })
 

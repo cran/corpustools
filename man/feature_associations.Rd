@@ -4,10 +4,20 @@
 \alias{feature_associations}
 \title{Get common nearby features given a query or query hits}
 \usage{
-feature_associations(tc, feature, query = NULL, hits = NULL,
-  query_feature = "token", window = 15, n = 25, min_freq = 1,
-  sort_by = c("chi2", "ratio", "freq"), subset = NULL,
-  subset_meta = NULL, include_self = F)
+feature_associations(
+  tc,
+  feature,
+  query = NULL,
+  hits = NULL,
+  query_feature = "token",
+  window = 15,
+  n = 25,
+  min_freq = 1,
+  sort_by = c("chi2", "ratio", "freq"),
+  subset = NULL,
+  subset_meta = NULL,
+  include_self = F
+)
 }
 \arguments{
 \item{tc}{a \link{tCorpus}}
@@ -41,6 +51,7 @@ a data.frame
 Get common nearby features given a query or query hits
 }
 \examples{
+\donttest{
 tc = create_tcorpus(sotu_texts, doc_column = 'id')
 tc$preprocess()
 
@@ -56,4 +67,5 @@ head(topf, 20) ## frequent words very close (five tokens) to "war"
 hits = search_features(tc, '"war terror"~10')
 topf = feature_associations(tc, 'feature', hits = hits)
 head(topf, 20) ## frequent words close to the combination of "war" and "terror" within 10 words
+}
 }

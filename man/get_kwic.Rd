@@ -4,10 +4,21 @@
 \alias{get_kwic}
 \title{Get keyword-in-context (KWIC) strings}
 \usage{
-get_kwic(tc, hits = NULL, i = NULL, query = NULL, code = "",
-  ntokens = 10, n = NA, nsample = NA, output_feature = "token",
-  query_feature = "token", context_level = c("document", "sentence"),
-  kw_tag = c("<", ">"), ...)
+get_kwic(
+  tc,
+  hits = NULL,
+  i = NULL,
+  query = NULL,
+  code = "",
+  ntokens = 10,
+  n = NA,
+  nsample = NA,
+  output_feature = "token",
+  query_feature = "token",
+  context_level = c("document", "sentence"),
+  kw_tag = c("<", ">"),
+  ...
+)
 }
 \arguments{
 \item{tc}{a tCorpus}
@@ -16,7 +27,7 @@ get_kwic(tc, hits = NULL, i = NULL, query = NULL, code = "",
 
 \item{i}{instead of the hits argument, you can give the indices of features directly.}
 
-\item{query}{instead of using the hits or i arguments, a search string can be given directly. Note that this simply a convenient shorthand for first creating a hits object with \link{search_features}. If a query is given, then the ... argument is used to pass other arguments to \link{tCorpus$search_features}.}
+\item{query}{instead of using the hits or i arguments, a search string can be given directly. Note that this simply a convenient shorthand for first creating a hits object with \link{search_features}. If a query is given, then the ... argument is used to pass other arguments to \link{search_features}.}
 
 \item{code}{if 'i' or 'query' is used, the code argument can be used to add a code label. Should be a vector of the same length that gives the code for each i or query, or a vector of length 1 for a single label.}
 

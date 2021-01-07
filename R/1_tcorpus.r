@@ -60,6 +60,7 @@ tCorpus <- R6::R6Class("tCorpus",
 
      tokens = NULL,
      meta = NULL,
+     model = NULL,
 
      validate = function() {
         self$validate_tokens()
@@ -92,9 +93,10 @@ tCorpus <- R6::R6Class("tCorpus",
        if (!identical(data.table::key(self$meta), 'doc_id')) data.table::setkeyv(self$meta, 'doc_id')
      },
 
-     initialize = function(tokens, meta) {
+     initialize = function(tokens, meta, model) {
        self$tokens = data.table(tokens)
        self$meta = data.table(meta)
+       self$model = model
        private$set_keys()
      },
 
@@ -104,7 +106,8 @@ tCorpus <- R6::R6Class("tCorpus",
 
      copy = function(){
        tCorpus$new(tokens = data.table::copy(self$tokens),
-                   meta = data.table::copy(self$meta))
+                   meta = data.table::copy(self$meta),
+                   model = self$model)
      },
 
 ## SHOW/GET DATA METHODS ##
@@ -226,14 +229,6 @@ tCorpus <- R6::R6Class("tCorpus",
 
 ## DATA MODIFICATION METHODS ##
 
-     set_special = function(token=NULL, lemma=NULL, POS=NULL, relation=NULL, parent=NULL) {
-       if(!is.null(token)) self$set_name(token, 'token')
-       if(!is.null(lemma)) self$set_name(lemma, 'lemma')
-       if(!is.null(POS)) self$set_name(POS, 'POS')
-       if(!is.null(relation)) self$set_name(relation, 'relation')
-       if(!is.null(parent)) self$set_name(parent, 'parent')
-     },
-
      set = function(column, value, subset=NULL, subset_value=T){
        self$validate_tokens()
 
@@ -264,6 +259,7 @@ tCorpus <- R6::R6Class("tCorpus",
          .value = value
          self$tokens[subset, (column) := .value]
 
+
        } else {
          if (column %in% c('sentence','token_id')) {
            if (!methods::is(value, 'numeric')) stop('position column has to be numeric/integer')
@@ -287,6 +283,29 @@ tCorpus <- R6::R6Class("tCorpus",
        self$meta[]
        invisible(self)
      },
+
+
+    merge = function(df, by=NULL, by.x=NULL, by.y=NULL) {
+      if (is.null(by) && is.null(by.x) && is.null(by.y)) return(invisible(self))
+      if (!all(c(by,by.x) %in% self$names)) stop('Not all columns specified in by / by.x exist in $tokens')
+      if (!all(c(by,by.x) %in% colnames(df))) stop('Not all columns specified in by / by.y exist in df')
+      
+      if (methods::is(df, 'data.table'))
+        if (any(duplicated(df[,c(by,by.y), with=F]))) stop('Columns specified in by (or by.y) must be unique in df')
+      else
+        if (any(duplicated(df[,c(by,by.y)]))) stop('Columns specified in by (or by.y) must be unique in df')
+      
+      cnames = setdiff(colnames(df), c(by,by.x,by.y))
+      in_tc = intersect(cnames, self$names)
+      if (length(in_tc) > 0) stop(sprintf('DUPLICATE COLUMN NAMES: Some columns that are to be merged have names that are already used in $tokens (%s)', paste(in_tc, collapse=', ')))
+      
+      if (!is.null(by))
+        self$tokens = merge(self$tokens, data.table::as.data.table(df), by=by, all.x=T)
+      else 
+        self$tokens = merge(self$tokens, data.table::as.data.table(df), by.x=by.x, by.y=by.y, all.x=T)
+      self$validate_tokens()
+      invisible(self)
+    },
 
      set_levels = function(column, levels) {
        if (!column %in% self$names) stop(sprintf('"%s" column does not exists in tokens', column))
@@ -352,6 +371,29 @@ tCorpus <- R6::R6Class("tCorpus",
        self$meta[]
        invisible(self)
      },
+
+      merge_meta = function(df, by=NULL, by.x=NULL, by.y=NULL) {
+        if (is.null(by) && is.null(by.x) && is.null(by.y)) return(invisible(self))
+        if (!all(c(by,by.x) %in% self$meta_names)) stop('Not all columns specified in by / by.x exist in $meta')
+        if (!all(c(by,by.x) %in% colnames(df))) stop('Not all columns specified in by / by.y exist in df')
+        
+        if (methods::is(df, 'data.table'))
+          if (any(duplicated(df[,c(by,by.y), with=F]))) stop('Columns specified in by (or by.y) must be unique in df')
+        else
+          if (any(duplicated(df[,c(by,by.y)]))) stop('Columns specified in by (or by.y) must be unique in df')
+        
+        
+        cnames = setdiff(colnames(df), c(by,by.x,by.y))
+        in_tc = intersect(cnames, self$meta_names)
+        if (length(in_tc) > 0) stop(sprintf('DUPLICATE COLUMN NAMES: Some columns that are to be merged have names that are already used in $meta (%s)', paste(in_tc, collapse=', ')))
+        
+        if (!is.null(by))
+          self$meta = merge(self$meta, data.table::as.data.table(df), by=by, all.x=T)
+        else 
+          self$meta = merge(self$meta, data.table::as.data.table(df), by.x=by.x, by.y=by.y, all.x=T)
+        self$validate_meta()
+        invisible(self)
+      },
 
      set_meta_levels = function(column, levels) {
         if (!column %in% self$meta_names) stop(sprintf('"%s" column does not exists in meta', column))
@@ -430,73 +472,6 @@ tCorpus <- R6::R6Class("tCorpus",
         as.data.frame(count_tcorpus(self, meta_cols, hits, feature, count, wide=T))
       },
 
-      lookup = function(x, feature='token', ignore_case=TRUE, batchsize=25, raw_regex=FALSE, fixed=FALSE, with_i=FALSE, as_ascii=FALSE, sub_query=list(), only_context=F, subcontext=NULL, lookup_table=NULL){
-        #forget_if_new(self$n) ## reset cache if n changes (possibly add some more indicators?)
-        ## replace with max cache size once implemented in memoise
-
-        has_sub_query = length(sub_query) > 0
-        if (has_sub_query) {
-          sub_feature = names(sub_query)[1]
-          sub_x = sub_query[[sub_feature]]
-          sub_query[[sub_feature]] = NULL
-          sub_out = self$lookup(sub_x, feature=sub_feature, ignore_case=TRUE, sub_query=sub_query, only_context=F)
-        }
-
-        if (any(x == '*')) {
-          if (only_context) {
-            out = unique(self$tokens, by = c('doc_id', subcontext))
-          } else {
-            out = data.table::copy(self$tokens)
-          }
-          if (with_i && !only_context) out[, i:=1:nrow(out)]
-          if (has_sub_query) {
-            if (is.null(sub_out)) return(NULL)
-            out = data.table::fintersect(out, sub_out)
-            if (is.null(out)) return(NULL)
-          }
-          return(out)
-        }
-
-        ## prepare lookup table: set a (secondary) data.table index
-        if (!feature %in% indices(self$tokens)) {
-
-          data.table::setindexv(self$tokens, feature)
-          message(sprintf('created index for "%s" column', feature))
-        }
-
-        ## if not fixed (exact value matching), first lookup x as regex in unique values
-        if (!fixed) {
-          if (is.null(lookup_table)) {
-            uval = if (is.factor(self$tokens[[feature]])) levels(self$tokens[[feature]]) else unique(self$tokens[[feature]])
-            #lookup_table = mem_create_lookup_table(uval, ignore_case, as_ascii)
-            lookup_table = create_lookup_table(uval, ignore_case, as_ascii)
-
-          }
-          #x = mem_lookup_terms(x, lookup_table, ignore_case=ignore_case, raw_regex=raw_regex, batchsize=batchsize, useBytes=T, as_ascii=as_ascii)
-          x = lookup_terms(x, lookup_table, ignore_case=ignore_case, raw_regex=raw_regex, batchsize=batchsize, useBytes=T, as_ascii=as_ascii)
-        }
-
-        if (length(x) == 0) return(NULL)
-        if (with_i && !only_context) {
-          i = na.omit(self$tokens[list(x), on=feature, which=T])
-          out = self$tokens[i,]
-          out[,i:=i]
-        } else {
-          out = self$tokens[list(x), on=feature, which=F]
-        }
-        if (only_context) out = unique(out, by=c('doc_id',subcontext))
-
-        #if (length(sub_query) > 0) out = filter_sub_query(out, sub_query)
-        if (nrow(out) == 0) return(NULL)
-        if (has_sub_query) {
-          if (is.null(sub_out)) return(NULL)
-          out = data.table::fintersect(out, sub_out)
-          if (is.null(out)) return(NULL)
-        }
-        return(out)
-      },
-
-      #forget_memoise = function() forget_all_mem(),
       indices = function() data.table::indices(self$tokens),
       clear_indices = function() data.table::setindex(self$tokens, NULL)
    ),
@@ -563,7 +538,8 @@ print.tCorpus <- function(x, ...) {
 #' @export
 refresh_tcorpus <- function(tc){
   tCorpus$new(tokens = data.table::copy(tc$get(keep_df = T)),
-              meta = data.table::copy(tc$get_meta(keep_df = T)))
+              meta = data.table::copy(tc$get_meta(keep_df = T)),
+              model = tc$model)
 }
 
 rebuild_tcorpus <- function(tc) {
@@ -611,7 +587,7 @@ as.tcorpus.tCorpus <- function(x, ...) x
 #' @param ... not used
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' x = c('First text','Second text')
 #' as.tcorpus(x) ## x is not a tCorpus object
 #' }

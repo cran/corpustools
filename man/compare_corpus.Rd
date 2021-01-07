@@ -4,9 +4,17 @@
 \alias{compare_corpus}
 \title{Compare tCorpus vocabulary to that of another (reference) tCorpus}
 \usage{
-compare_corpus(tc, tc_y, feature, smooth = 0.1, min_ratio = NULL,
-  min_chi2 = NULL, is_subset = F, yates_cor = c("auto", "yes", "no"),
-  what = c("freq", "docfreq", "cooccurrence"))
+compare_corpus(
+  tc,
+  tc_y,
+  feature,
+  smooth = 0.1,
+  min_ratio = NULL,
+  min_chi2 = NULL,
+  is_subset = F,
+  yates_cor = c("auto", "yes", "no"),
+  what = c("freq", "docfreq", "cooccurrence")
+)
 }
 \arguments{
 \item{tc}{a \code{\link{tCorpus}}}
@@ -34,6 +42,7 @@ A vocabularyComparison object
 Compare tCorpus vocabulary to that of another (reference) tCorpus
 }
 \examples{
+\donttest{
 tc = create_tcorpus(sotu_texts, doc_column = 'id')
 
 tc$preprocess('token', 'feature', remove_stopwords = TRUE, use_stemming = TRUE)
@@ -44,7 +53,6 @@ bush = tc$subset_meta(president == 'George W. Bush', copy=TRUE)
 comp = compare_corpus(tc, bush, 'feature')
 comp = comp[order(-comp$chi),]
 head(comp)
-\donttest{
 plot(comp)
 }
 }

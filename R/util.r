@@ -61,7 +61,7 @@ pretty_text_paste <- function(x){
   x
 }
 
-fast_dummy_factor <- function(x) { ## if , still return a factor for consistency, but no need to match stuff
+fast_dummy_factor <- function(x) {
   x = as.integer(x)
   nlevels = length(stats::na.omit(unique(x)))
   attr(x, 'levels') = if (nlevels > 0) as.character(1:nlevels) else character()
@@ -94,5 +94,22 @@ double_to_single_slash <- function(x) {
   x = gsub('\\\\t','\t', x)
   x = gsub('\\\\r','\r', x)
   x
+}
+
+
+make_dir <- function(path=getwd(), ...) {
+  if (is.null(path)){
+    path = system.file(package='corpustools')
+  } else {
+    path = if (path == '') getwd() else normalizePath(gsub('\\/$', '', path))
+  }
+  if (file.access(path,"6") == -1) stop('You do not have write permission for this location')
+  #path = paste(path, 'ext_resources', sep='/')
+  
+  add = paste(unlist(list(...)), collapse='/')
+  if (!add == '') path = file.path(path, add)
+  
+  if (!dir.exists(path)) dir.create(path, recursive = TRUE)
+  path
 }
 

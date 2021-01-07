@@ -43,12 +43,12 @@ get_global_i <- function(tc, context_level=c('document','sentence'), max_window_
   is_tcorpus(tc)
   context_level = match.arg(context_level)
   if (context_level == 'document'){
-    global_i = global_position(position = tc$get('token_id'), context = tc$get('doc_id'), max_window_size = max_window_size, presorted=T, position_is_local=T)
+    global_i = global_position(position = floor(tc$get('token_id')), context = tc$get('doc_id'), max_window_size = max_window_size, presorted=T, position_is_local=T)
   }
   if (context_level == 'sentence'){
     if (!'sentence' %in% tc$names) stop('Sentence level not possible, since no sentence information is available. To enable sentence level analysis, use split_sentences = T in "create_tcorpus()" or specify sentence_col in "tokens_to_tcorpus()"')
     globsent = global_position(position = tc$get('sentence'), context = tc$get('doc_id'), presorted=T, position_is_local=T)
-    global_i = global_position(position = tc$get('token_i'), context = globsent, max_window_size = max_window_size, presorted=T, position_is_local=T)
+    global_i = global_position(position = floor(tc$get('token_i')), context = globsent, max_window_size = max_window_size, presorted=T, position_is_local=T)
   }
   global_i
 }
@@ -102,40 +102,3 @@ position_matrix <- function(i, j, shifts=0, count_once=T, distance_as_value=F, a
   mat = methods::as(mat, 'dgTMatrix')
   mat[return_i,,drop=F]
 }
-
-
-globalFeatureVector <- R6::R6Class("globalFeatureVector",
-                                   ## very restricted sparse vector class for quick indices lookup of features based on global_i (with windows between contexts)
-                                   public = list(.v = NULL,
-                                                 .levels = NULL,
-                                                 initialize = function(feature, global_i, empty_str=''){
-                                                   feature = fast_factor(feature)
-                                                   self$.levels = c(empty_str, levels(feature))
-                                                   self$.v = Matrix::sparseVector(as.numeric(feature), global_i, max(global_i))
-                                                 },
-                                                 get = function(i, ignore_empty=F, allow_na=F) {
-                                                   if (allow_na){
-                                                     is_na = i < 0 | i > length(self$.v)
-                                                     i = i[!is_na]
-                                                   }
-                                                   if(ignore_empty) {
-                                                     allow_na = F
-                                                     v = self$.v[i]
-                                                     if (!allow_na) return(self$.levels[v[v > 0] + 1]) else v_notna = self$.levels[v[v > 0] + 1]
-                                                   } else {
-                                                     if (!allow_na) return(self$.levels[self$.v[i] + 1]) else v_notna = self$.levels[self$.v[i] + 1]
-                                                   }
-                                                   v = rep(NA, length(is_na))
-                                                   v[!is_na] = v_notna
-                                                   return(v)
-                                                 }
-                                   )
-)
-
-#' @export
-'[.globalFeatureVector' = function(x,i, ignore_empty=F, allow_na=F) {
-  if (methods::is(i, 'logical')) x$get(which(i)) else x$get(i, ignore_empty=ignore_empty, allow_na=allow_na)
-}
-
-#' @export
-length.globalFeatureVector = function(x) length(x$.v)

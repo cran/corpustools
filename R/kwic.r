@@ -9,7 +9,7 @@
 #' @param tc a tCorpus
 #' @param hits results of feature search. see \link{search_features}.
 #' @param i instead of the hits argument, you can give the indices of features directly.
-#' @param query instead of using the hits or i arguments, a search string can be given directly. Note that this simply a convenient shorthand for first creating a hits object with \link{search_features}. If a query is given, then the ... argument is used to pass other arguments to \link{tCorpus$search_features}.
+#' @param query instead of using the hits or i arguments, a search string can be given directly. Note that this simply a convenient shorthand for first creating a hits object with \link{search_features}. If a query is given, then the ... argument is used to pass other arguments to \link{search_features}.
 #' @param code if 'i' or 'query' is used, the code argument can be used to add a code label. Should be a vector of the same length that gives the code for each i or query, or a vector of length 1 for a single label.
 #' @param ntokens an integers specifying the size of the context, i.e. the number of tokens left and right of the keyword.
 #' @param n a number, specifying the total number of hits
@@ -43,7 +43,7 @@ keyword_in_context <- function(tc, hits=NULL, i=NULL, code='', ntokens=10, n=NA,
   if (class(i) == 'logical') i = which(i)
   ## remove i and code parameters
 
-  if(!is.featureHits(hits)) stop('hits must be a featureHits object (created with search_features()')
+  if(!is.null(hits) && !is.featureHits(hits)) stop('hits must be a featureHits object (created with search_features()')
   hits$hits$hit_id = stringi::stri_paste(hits$hits$code, hits$hits$hit_id, sep=' ')
   d = hits$hits
 
@@ -65,8 +65,9 @@ keyword_in_context <- function(tc, hits=NULL, i=NULL, code='', ntokens=10, n=NA,
   d = d[!is.na(d$feature),] ## positions that do not exist (token_id out of bounds) returned NA in tc$get
 
   d$feature = as.character(d$feature)
+  #d$feature[d$is_kw] = sprintf('%s%s%s', kw_tag[1], d$feature[d$is_kw], kw_tag[2])
   d$feature[d$is_kw] = sprintf('%s%s%s', kw_tag[1], d$feature[d$is_kw], kw_tag[2])
-
+  
   ## kwic's of the same hit_id should be merged.
   d = d[order(d$hit_id, d$token_id, -d$is_kw),]
   d = d[!duplicated(d[,c('hit_id','token_id')]),]

@@ -1,7 +1,7 @@
 prepare_model <- function(udpipe_model, local_path=getwd()) {
 
   udpipe_models = eval(formals(udpipe::udpipe_download_model)[[1]])
-
+  
   if (!udpipe_model %in% udpipe_models) {
     guess_language = gsub('-.*','',udpipe_model)
     avail_language = stringi::stri_extract(udpipe_models, regex='.*(?=-)')
@@ -13,11 +13,12 @@ prepare_model <- function(udpipe_model, local_path=getwd()) {
     stop(message)
   }
 
-  model_folder = gsub('-', '_', udpipe_model)
-  path = make_dir(local_path, 'udpipe_models', model_folder)
-
+  #model_folder = gsub('-', '_', udpipe_model)
+  path = make_dir(local_path, 'corpustools_data', 'udpipe_models')
+  
   fname = list.files(path, full.names = T, include.dirs = F)
-  fname = fname[grep('udpipe', fname)]
+  fname = fname[grep(udpipe_model, fname, fixed=T)]
+  
   if (length(fname) == 0) fname = NA
   if (!is.na(fname)) {
     m = udpipe::udpipe_load_model(fname)
@@ -53,20 +54,22 @@ show_udpipe_models <- function() {
 }
 
 
-udpipe_parse <- function(x, udpipe_model, udpipe_model_path, cache=1, doc_id=1:length(x), use_parser=use_parser, max_sentences=NULL, max_tokens=NULL, verbose=F){
+udpipe_parse <- function(texts, udpipe_model, udpipe_model_path, udpipe_cores, cache=1, max_batchsize=50, doc_ids=1:length(texts), use_parser=T, max_sentences=NULL, max_tokens=NULL, remember_spaces=F, verbose=F){
   m = prepare_model(udpipe_model, udpipe_model_path)
 
-  batchsize = 100  ## keep constant, but if we ever change our minds, note that it is used to hash the cache ids
-  batch_i = get_batch_i(length(doc_id), batchsize=batchsize, return_list=T)
-  n = length(batch_i)
-  if (verbose && n > 1) {
-    pb = utils::txtProgressBar(min = 1, max = n, style = 3)
-    pb$up(1)
+  batchsize = length(texts) / udpipe_cores
+  if (batchsize > max_batchsize) {
+    batchsize = max_batchsize
+    usefull_verbose=T
+  } else {
+    usefull_verbose=F
   }
+  batch_i = get_batch_i(length(doc_ids), batchsize=batchsize, return_list=T)
+  n = length(batch_i)
 
   if (cache > 0) {
-    cache_path = make_dir(file.path(udpipe_model_path, 'udpipe_models'), 'caches')
-    cache_hash =  digest::digest(list(x, udpipe_model, doc_id, use_parser, max_sentences, max_tokens, batchsize))
+    cache_path = make_dir(file.path(udpipe_model_path, 'corpustools_data'), 'caches')
+    cache_hash =  digest::digest(list(texts, udpipe_model, doc_ids, use_parser, max_sentences, max_tokens, batchsize))
 
     current_caches = list.files(cache_path, full.names = T)
     cache_exists = grep(cache_hash, current_caches, fixed = T, value=T)
@@ -92,40 +95,69 @@ udpipe_parse <- function(x, udpipe_model, udpipe_model_path, cache=1, doc_id=1:l
     }
 
     cached_batches = list.files(cache_dir)
-  } else cached_batches = c()
-
-  tokens = vector('list', n)
-  for (i in 1:n){
-    if (i %in% cached_batches) {
-      tokens[[i]] = readRDS(file.path(cache_dir, i))
-    } else {
-      tokens[[i]] = udpipe_parse_batch(x[batch_i[[i]]], m, doc_id=doc_id[batch_i[[i]]],
-                                       use_parser=use_parser, max_sentences=max_sentences, max_tokens=max_tokens)
-      if (cache > 0) saveRDS(tokens[[i]], file = file.path(cache_dir, i))
-    }
-
-    if (verbose && n > 1) pb$up(i+1)
+  } else {
+    cache_dir=NULL
+    cached_batches = c()
   }
+
+  if (verbose && usefull_verbose)
+    pbapply::pboptions(type = "txt", style=3)
+  else
+    pbapply::pboptions(type='none')
+
+  if (udpipe_cores > 1) {
+    if (udpipe_cores > parallel::detectCores()) stop(sprintf('You are trying to use more cores (%s) than parallel::detectCores() can detect (%s).', udpipe_cores, parallel::detectCores()))
+    if (.Platform$OS.type %in% c("windows")) {
+      cl = parallel::makeCluster(udpipe_cores)
+      on.exit(parallel::stopCluster(cl))
+    }
+    else
+      cl = udpipe_cores
+  } else cl = NULL
+
+  tokens = pbapply::pblapply(1:n, cl=cl, FUN=udpipe_parse_batch,
+                   texts=texts, batch_i=batch_i, udpipe_model=m,
+                   doc_ids=doc_ids, cache_dir=cache_dir, cached_batches=cached_batches,
+                   use_parser=use_parser, max_sentences=max_sentences, max_tokens=max_tokens)
   tokens = data.table::rbindlist(tokens)
 
-
   ## set factors
+  doc_id = NULL
   tokens[, doc_id := fast_factor(tokens$doc_id)]
   for(col in colnames(tokens)) {
     if (class(tokens[[col]]) %in% c('character')) tokens[,(col) := fast_factor(tokens[[col]])]
   }
+
+  if (remember_spaces) {
+    space = NULL; misc = NULL ## data.table bindings
+    levels(tokens$misc) = c(levels(tokens$misc), " ")
+    tokens$misc[is.na(tokens$misc)] = " "
+    tokens[, space := fast_factor(gsub('Space[s]?After=', '', misc))]
+    levels(tokens$space) = ifelse(levels(tokens$space) == 'No', '', levels(tokens$space))
+    levels(tokens$space) = double_to_single_slash(levels(tokens$space))
+    levels(tokens$space) = stringi::stri_replace_all(levels(tokens$space), regex = '\\\\s', replacement = ' ')
+  } else {
+    tokens$start = NULL
+    tokens$end = NULL
+  }
+  tokens$misc = NULL
+  tokens$term_id = NULL
+
   tokens
 }
 
-udpipe_parse_batch <- function(x, udpipe_model, doc_id, use_parser, max_sentences, max_tokens) {
+udpipe_parse_batch <- function(i, texts, batch_i, udpipe_model, doc_ids, cache_dir, cached_batches, use_parser, max_sentences, max_tokens) {
+  if (i %in% cached_batches) {
+    return(readRDS(file.path(cache_dir, i)))
+  }
   token_id = NULL; head_token_id = NULL; sentence_id = NULL ## prevent no visible bindings error (due to data table syntax)
-
   parser = if (use_parser) 'default' else 'none'
+  x = texts[batch_i[[i]]]
+  doc_id = doc_ids[batch_i[[i]]]
 
-  x <- udpipe::udpipe_annotate(udpipe_model, x = x, doc_id=doc_id, parser = parser)
+  names(x) = doc_id
+  x = udpipe::udpipe(x, object=udpipe_model, paralell.cores=1, parser=parser)
   x = as.data.table(x)
-
-  #warning('let op zum')
 
   x[,token_id := as.numeric(token_id)]
   x[,head_token_id := as.numeric(head_token_id)]
@@ -150,25 +182,12 @@ udpipe_parse_batch <- function(x, udpipe_model, doc_id, use_parser, max_sentence
   data.table::setnames(x, old = c('sentence_id', 'upos'), new = c('sentence', 'POS'))
   if (use_parser) data.table::setnames(x, old = c('head_token_id', 'dep_rel'), new = c('parent','relation'))
 
+  if (!is.null(cache_dir)) saveRDS(x, file.path(cache_dir, i))
+
   x
 }
 
 
-make_dir <- function(path=getwd(), ...) {
-  if (is.null(path)){
-    path = system.file(package='corpustools')
-  } else {
-    path = if (path == '') getwd() else normalizePath(gsub('\\/$', '', path))
-  }
-  if (file.access(path,"6") == -1) stop('You do not have write permission for this location')
-  #path = paste(path, 'ext_resources', sep='/')
-
-  add = paste(unlist(list(...)), collapse='/')
-  if (!add == '') path = file.path(path, add)
-
-  if (!dir.exists(path)) dir.create(path, recursive = TRUE)
-  path
-}
 
 
 #' Cast the "feats" column in UDpipe tokens to columns
@@ -181,7 +200,7 @@ make_dir <- function(path=getwd(), ...) {
 #' ## R6 method for class tCorpus. Use as tc$method (where tc is a tCorpus object).
 #'
 #' \preformatted{
-#' feats_to_columns(keep=NULL, drop=NULL, rm_column=T)
+#' feats_to_columns(keep=NULL, drop=NULL, rm_column=TRUE)
 #' }
 #'
 #' @param keep     Optionally, the names of features to keep
@@ -191,7 +210,7 @@ make_dir <- function(path=getwd(), ...) {
 #' @name tCorpus$feats_to_columns
 #' @aliases feats_to_columms
 #' @examples
-#' \donttest{
+#' if (interactive()) {
 #' tc = create_tcorpus('This is a test Bobby.', udpipe_model='english-ewt')
 #' tc$feats_to_columns()
 #' tc$tokens
@@ -218,9 +237,9 @@ tCorpus$set('public', 'feats_to_columns', function(keep=NULL, drop=NULL, rm_colu
     if (!is.null(keep) && !col %in% keep) next
     if (col %in% drop) next
     cname = if (col %in% self$names) paste0('feats.', col) else col
-    self$tokens[d$.I, (cname) := d[[col]]]
+    self$tokens[d$.I, (cname) := fast_factor(d[[col]])]
   }
 
-  tc$tokens[]
+  self$tokens[]
   invisible(self)
 })

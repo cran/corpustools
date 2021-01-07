@@ -4,12 +4,25 @@
 \alias{plot_semnet}
 \title{Visualize a semnet network}
 \usage{
-plot_semnet(g, weight_attr = "weight", min_weight = NA,
-  delete_isolates = F, vertexsize_attr = "freq", vertexsize_coef = 1,
-  vertexcolor_attr = NA, edgewidth_coef = 1, max_backbone_alpha = NA,
-  labelsize_coef = 1, labelspace_coef = 1.1, reduce_labeloverlap = F,
-  redo_layout = F, return_graph = T, vertex.label.dist = 0.25,
-  layout_fun = igraph::layout_with_fr, ...)
+plot_semnet(
+  g,
+  weight_attr = "weight",
+  min_weight = NA,
+  delete_isolates = F,
+  vertexsize_attr = "freq",
+  vertexsize_coef = 1,
+  vertexcolor_attr = NA,
+  edgewidth_coef = 1,
+  max_backbone_alpha = NA,
+  labelsize_coef = 1,
+  labelspace_coef = 1.1,
+  reduce_labeloverlap = F,
+  redo_layout = F,
+  return_graph = T,
+  vertex.label.dist = 0.25,
+  layout_fun = igraph::layout_with_fr,
+  ...
+)
 }
 \arguments{
 \item{g}{A network in the igraph format. Specifically designed for the output of coOccurenceNetwork() and windowedCoOccurenceNetwork()}
@@ -59,7 +72,7 @@ Before plotting the network, the set_network_attributes() function is used to se
 tc = create_tcorpus(sotu_texts, doc_column = 'id')
 tc$preprocess('token','feature', remove_stopwords = TRUE, use_stemming = TRUE, min_docfreq=10)
 \donttest{
-g = tc$semnet_window('feature', window.size = 10)
+g = semnet_window(tc, 'feature', window.size = 10)
 g = backbone_filter(g, max_vertices = 100)
 plot_semnet(g)
 }

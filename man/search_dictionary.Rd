@@ -4,9 +4,20 @@
 \alias{search_dictionary}
 \title{Dictionary lookup}
 \usage{
-search_dictionary(tc, dict, token_col = "token", string_col = "string",
-  code_col = "code", sep = " ", case_sensitive = F,
-  use_wildcards = T, flatten_colloc = T, ascii = F, verbose = F)
+search_dictionary(
+  tc,
+  dict,
+  token_col = "token",
+  string_col = "string",
+  code_col = "code",
+  sep = " ",
+  mode = c("unique_hits", "features"),
+  case_sensitive = F,
+  use_wildcards = T,
+  standardize = T,
+  ascii = F,
+  verbose = F
+)
 }
 \arguments{
 \item{tc}{A tCorpus}
@@ -29,11 +40,15 @@ If dict is a quanteda dictionary with multiple levels, "code_l2", "code_l3", etc
 For example, if the dictionary contains "Barack Obama", sep should be " " so that it matches the consequtive tokens "Barack" and "Obama".
 In some dictionaries, however, it might say "Barack+Obama", so in that case sep = '\\+' should be used.}
 
+\item{mode}{There are two modes: "unique_hits" and "features". The "unique_hits" mode prioritizes finding unique matches, which is recommended for counting how often a dictionary term occurs.
+If a term matches multiple dictionary terms (which should only happen for nested multi-word terms, such as "bad" and "not bad"), the longest term is always used. 
+The features mode does not delete duplicates.}
+
 \item{case_sensitive}{logical, should lookup be case sensitive?}
 
 \item{use_wildcards}{Use the wildcards * (any number including none of any character) and ? (one or none of any character). If FALSE, exact string matching is used}
 
-\item{flatten_colloc}{If true, collocations in the tokens (rows in tc$tokens) will be considered separate words. For example, "President_Obama" will be split to "president" "obama", so that "president obama" in the dictionary matches correctly.}
+\item{standardize}{If true, standardize how terms in the corpus and dictionary are tokenized. This prevens mismatching in cases like collocations ("Barack_Obama" versus "Barack" "Obama") and emoticons}
 
 \item{ascii}{If true, convert text to ascii before matching}
 

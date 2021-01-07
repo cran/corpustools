@@ -26,16 +26,15 @@ tokenize_to_dataframe <- function(x, doc_id=1:length(x), split_sentences=F, max_
 }
 
 
-
-
 split_tokens <- function(x, max_tokens, remember_spaces=F) {
   x = stringi::stri_split_boundaries(x, type='word')
+  
   if (remember_spaces) {
-    x = lapply(x, function(x) collapse_terms_cpp(x, collapse=x %in% c(' ', '\n','\t','\r\n'), sep=" ", sep2=""))
+    x = lapply(x, function(x) collapse_terms_cpp(x, collapse=stringi::stri_detect(x, regex='^\\s+$'), sep=" ", sep2=""))
   } else {
-    x = lapply(x, function(x) x[!x %in% c(' ', '\n','\t','\r\n')])
+    x = lapply(x, function(x) x[!stringi::stri_detect(x, regex='^\\s+$')])
   }
-  if (!is.null(max_tokens)) x = sapply(x, head, max_tokens)
+  if (!is.null(max_tokens)) x = sapply(x, head, max_tokens, simplify=F)
   x
 }
 
@@ -80,15 +79,4 @@ unlist_to_df <- function(l, ids=1:length(l), global_position=F){
   list(id = rep(ids[filter], len[filter]),
              position = position,
              value = unlist(l[filter]))
-}
-
-function(){
-test = create_tcorpus('test\n\n\ndit. ok\t\t. en dat\t ook\n.\n\n', udpipe_model='dutch', remember_spaces=T)$tokens
-cat(as.character(test$space))
-
-test$space
-cat(paste(test$token, test$space))
-
-test = create_tcorpus('test\n\n\ndit. ok\t\t. en dat\t ook\n.\n\n', remember_spaces=T)$tokens
-cat(paste(test$token, test$space))
 }

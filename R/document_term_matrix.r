@@ -87,6 +87,8 @@ do_get_dtm <- function(tc, feature, context_level=c('document','sentence'), weig
     sub_i = 1:tc$n
   }
 
+
+
   feature = tc$get(feature)
 
   if(!methods::is(feature, 'factor')) feature = fast_factor(feature)
@@ -103,10 +105,18 @@ do_get_dtm <- function(tc, feature, context_level=c('document','sentence'), weig
   if(drop_empty_terms && methods::is(feature, 'factor')) feature = droplevels(feature)
   notNA = !is.na(feature)
 
-  m = Matrix::spMatrix(length(levels(i)), length(levels(feature)),
-                       as.numeric(i)[notNA], as.numeric(feature)[notNA],
-                       rep(1, sum(notNA)))
 
+  if (methods::is(feature, 'factor')) {
+    cols = length(levels(feature))
+    j = as.numeric(feature)[notNA]
+  } else {
+    cols = length(unique(feature))
+    j = as.numeric(feature)[notNA]
+  }
+
+  m = Matrix::spMatrix(length(levels(i)), cols,
+                       as.numeric(i)[notNA], j,
+                       rep(1, sum(notNA)))
   dimnames(m) = list(levels(i), levels(feature))
 
   m = weight_dtm(m, weight, idf=idf)

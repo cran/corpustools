@@ -31,18 +31,55 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// group_coref_ids
+NumericVector group_coref_ids(NumericVector x, NumericVector y, int n);
+RcppExport SEXP _corpustools_group_coref_ids(SEXP xSEXP, SEXP ySEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(group_coref_ids(x, y, n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// coref_candidate_select
+NumericVector coref_candidate_select(LogicalVector needs_coref, CharacterVector doc_id, CharacterVector gender, CharacterVector number, CharacterVector so, CharacterVector person, CharacterVector pt, NumericVector pos, NumericVector id, LogicalVector pronoun, int lag, int lead);
+RcppExport SEXP _corpustools_coref_candidate_select(SEXP needs_corefSEXP, SEXP doc_idSEXP, SEXP genderSEXP, SEXP numberSEXP, SEXP soSEXP, SEXP personSEXP, SEXP ptSEXP, SEXP posSEXP, SEXP idSEXP, SEXP pronounSEXP, SEXP lagSEXP, SEXP leadSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< LogicalVector >::type needs_coref(needs_corefSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type doc_id(doc_idSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type gender(genderSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type number(numberSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type so(soSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type person(personSEXP);
+    Rcpp::traits::input_parameter< CharacterVector >::type pt(ptSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pos(posSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type id(idSEXP);
+    Rcpp::traits::input_parameter< LogicalVector >::type pronoun(pronounSEXP);
+    Rcpp::traits::input_parameter< int >::type lag(lagSEXP);
+    Rcpp::traits::input_parameter< int >::type lead(leadSEXP);
+    rcpp_result_gen = Rcpp::wrap(coref_candidate_select(needs_coref, doc_id, gender, number, so, person, pt, pos, id, pronoun, lag, lead));
+    return rcpp_result_gen;
+END_RCPP
+}
 // do_code_dictionary
-DataFrame do_code_dictionary(NumericVector feature, std::vector<int> context, NumericVector which, List dict, bool verbose);
-RcppExport SEXP _corpustools_do_code_dictionary(SEXP featureSEXP, SEXP contextSEXP, SEXP whichSEXP, SEXP dictSEXP, SEXP verboseSEXP) {
+DataFrame do_code_dictionary(NumericVector feature, std::vector<int>& context, std::vector<int>& token_id, NumericVector which, List dict, int hit_id_offset, bool verbose);
+RcppExport SEXP _corpustools_do_code_dictionary(SEXP featureSEXP, SEXP contextSEXP, SEXP token_idSEXP, SEXP whichSEXP, SEXP dictSEXP, SEXP hit_id_offsetSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type feature(featureSEXP);
-    Rcpp::traits::input_parameter< std::vector<int> >::type context(contextSEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type context(contextSEXP);
+    Rcpp::traits::input_parameter< std::vector<int>& >::type token_id(token_idSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type which(whichSEXP);
     Rcpp::traits::input_parameter< List >::type dict(dictSEXP);
+    Rcpp::traits::input_parameter< int >::type hit_id_offset(hit_id_offsetSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_code_dictionary(feature, context, which, dict, verbose));
+    rcpp_result_gen = Rcpp::wrap(do_code_dictionary(feature, context, token_id, which, dict, hit_id_offset, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -59,20 +96,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // AND_hit_ids_cpp
-NumericVector AND_hit_ids_cpp(NumericVector con, NumericVector subcon, NumericVector pos, NumericVector term_i, double n_unique, std::vector<std::string> group_i, LogicalVector replace, bool feature_mode);
-RcppExport SEXP _corpustools_AND_hit_ids_cpp(SEXP conSEXP, SEXP subconSEXP, SEXP posSEXP, SEXP term_iSEXP, SEXP n_uniqueSEXP, SEXP group_iSEXP, SEXP replaceSEXP, SEXP feature_modeSEXP) {
+NumericVector AND_hit_ids_cpp(NumericVector con, NumericVector subcon, NumericVector term_i, double n_unique, std::vector<std::string> group_i, LogicalVector replace, bool feature_mode);
+RcppExport SEXP _corpustools_AND_hit_ids_cpp(SEXP conSEXP, SEXP subconSEXP, SEXP term_iSEXP, SEXP n_uniqueSEXP, SEXP group_iSEXP, SEXP replaceSEXP, SEXP feature_modeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type con(conSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type subcon(subconSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type pos(posSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type term_i(term_iSEXP);
     Rcpp::traits::input_parameter< double >::type n_unique(n_uniqueSEXP);
     Rcpp::traits::input_parameter< std::vector<std::string> >::type group_i(group_iSEXP);
     Rcpp::traits::input_parameter< LogicalVector >::type replace(replaceSEXP);
     Rcpp::traits::input_parameter< bool >::type feature_mode(feature_modeSEXP);
-    rcpp_result_gen = Rcpp::wrap(AND_hit_ids_cpp(con, subcon, pos, term_i, n_unique, group_i, replace, feature_mode));
+    rcpp_result_gen = Rcpp::wrap(AND_hit_ids_cpp(con, subcon, term_i, n_unique, group_i, replace, feature_mode));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -141,9 +177,11 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_corpustools_collapse_terms_cpp", (DL_FUNC) &_corpustools_collapse_terms_cpp, 4},
     {"_corpustools_uncollapse_terms_cpp", (DL_FUNC) &_corpustools_uncollapse_terms_cpp, 2},
-    {"_corpustools_do_code_dictionary", (DL_FUNC) &_corpustools_do_code_dictionary, 5},
+    {"_corpustools_group_coref_ids", (DL_FUNC) &_corpustools_group_coref_ids, 3},
+    {"_corpustools_coref_candidate_select", (DL_FUNC) &_corpustools_coref_candidate_select, 12},
+    {"_corpustools_do_code_dictionary", (DL_FUNC) &_corpustools_do_code_dictionary, 7},
     {"_corpustools_fast_factor_cpp", (DL_FUNC) &_corpustools_fast_factor_cpp, 2},
-    {"_corpustools_AND_hit_ids_cpp", (DL_FUNC) &_corpustools_AND_hit_ids_cpp, 8},
+    {"_corpustools_AND_hit_ids_cpp", (DL_FUNC) &_corpustools_AND_hit_ids_cpp, 7},
     {"_corpustools_proximity_hit_ids_cpp", (DL_FUNC) &_corpustools_proximity_hit_ids_cpp, 10},
     {"_corpustools_sequence_hit_ids_cpp", (DL_FUNC) &_corpustools_sequence_hit_ids_cpp, 5},
     {"_corpustools_ngrams_cpp", (DL_FUNC) &_corpustools_ngrams_cpp, 5},

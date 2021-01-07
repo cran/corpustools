@@ -9,16 +9,24 @@ uncollapse_terms_cpp <- function(term, sep = " ") {
     .Call('_corpustools_uncollapse_terms_cpp', PACKAGE = 'corpustools', term, sep)
 }
 
-do_code_dictionary <- function(feature, context, which, dict, verbose) {
-    .Call('_corpustools_do_code_dictionary', PACKAGE = 'corpustools', feature, context, which, dict, verbose)
+group_coref_ids <- function(x, y, n) {
+    .Call('_corpustools_group_coref_ids', PACKAGE = 'corpustools', x, y, n)
+}
+
+coref_candidate_select <- function(needs_coref, doc_id, gender, number, so, person, pt, pos, id, pronoun, lag, lead) {
+    .Call('_corpustools_coref_candidate_select', PACKAGE = 'corpustools', needs_coref, doc_id, gender, number, so, person, pt, pos, id, pronoun, lag, lead)
+}
+
+do_code_dictionary <- function(feature, context, token_id, which, dict, hit_id_offset, verbose) {
+    .Call('_corpustools_do_code_dictionary', PACKAGE = 'corpustools', feature, context, token_id, which, dict, hit_id_offset, verbose)
 }
 
 fast_factor_cpp <- function(x, levs) {
     .Call('_corpustools_fast_factor_cpp', PACKAGE = 'corpustools', x, levs)
 }
 
-AND_hit_ids_cpp <- function(con, subcon, pos, term_i, n_unique, group_i, replace, feature_mode) {
-    .Call('_corpustools_AND_hit_ids_cpp', PACKAGE = 'corpustools', con, subcon, pos, term_i, n_unique, group_i, replace, feature_mode)
+AND_hit_ids_cpp <- function(con, subcon, term_i, n_unique, group_i, replace, feature_mode) {
+    .Call('_corpustools_AND_hit_ids_cpp', PACKAGE = 'corpustools', con, subcon, term_i, n_unique, group_i, replace, feature_mode)
 }
 
 proximity_hit_ids_cpp <- function(con, subcon, pos, term_i, n_unique, window, seq_i, replace, feature_mode, directed) {

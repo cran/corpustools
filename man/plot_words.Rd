@@ -4,9 +4,22 @@
 \alias{plot_words}
 \title{Plot a wordcloud with words ordered and coloured according to a dimension (x)}
 \usage{
-plot_words(x, y = NULL, words, wordfreq = rep(1, length(x)),
-  xlab = "", ylab = "", yaxt = "n", scale = 1, random.y = T,
-  xlim = NULL, ylim = NULL, col = c("darkred", "navyblue"), ...)
+plot_words(
+  x,
+  y = NULL,
+  words,
+  wordfreq = rep(1, length(x)),
+  xlab = "",
+  ylab = "",
+  yaxt = "n",
+  scale = 1,
+  random.y = T,
+  xlim = NULL,
+  ylim = NULL,
+  col = c("darkred", "navyblue"),
+  fixed_col = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{The (approximate) x positions of the words}
@@ -32,6 +45,8 @@ plot_words(x, y = NULL, words, wordfreq = rep(1, length(x)),
 \item{ylim}{Starting value of y axis}
 
 \item{col}{A vector of colors that is passed to colorRamp to interpolate colors over x axis}
+
+\item{fixed_col}{Optionally, a vector of the exact colors given to words.}
 
 \item{...}{additional parameters passed to the plot function}
 }
