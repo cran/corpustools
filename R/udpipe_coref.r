@@ -122,13 +122,13 @@ get_coref_nodes <- function(tokens, has_quote) {
 
 
 get_coref_ids <- function(tokens, e, has_quote, min_sim, max_sim_dist, lag, lead) {
-  Gender = Number = relation = Person = PronType = token_id = pronoun = quote_id = quote_verbatim = NULL
+  Gender = Number = relation = Person = PronType = token_id = pronoun = quote_id = quote_verbatim = POS = NULL
   if (has_quote) 
-    ids = e[,list(gender = agg_feat(Gender), number = agg_feat(Number), so = agg_so(relation), person = agg_feat(Person), 
+    ids = e[,list(gender = agg_feat(Gender), number = agg_feat(Number), so = agg_so(relation), person = agg_feat(Person), POS = agg_feat(POS),
                   prontype = agg_feat(PronType), pos = mean(token_id), pronoun = any(pronoun, na.rm = T),
                   source_id = agg_source_quote_id(quote, quote_id), verbatim_id = agg_verbatim_quote_id(quote_verbatim, quote_id)), by=c('doc_id','.ID')]
   else 
-    ids = e[,list(gender = agg_feat(Gender), number = agg_feat(Number), so = agg_so(relation), person = agg_feat(Person), 
+    ids = e[,list(gender = agg_feat(Gender), number = agg_feat(Number), so = agg_so(relation), person = agg_feat(Person), POS = agg_feat(POS),
                   prontype = agg_feat(PronType), pos = mean(token_id), pronoun = any(pronoun, na.rm = T)), by=c('doc_id','.ID')]
   
   ## first, resolve coreferences based on text simimlarities of nouns and proper names
@@ -142,7 +142,18 @@ get_coref_ids <- function(tokens, e, has_quote, min_sim, max_sim_dist, lag, lead
   if (has_quote) ids = within_quote_coref(ids)
   
   ## fourth, find coreferences based on gender, number, subject/object (so), person (1st,2nd,3rd), pronoun type and position
-  ids$coref_id = coref_candidate_select(ids$needs_coref, as.character(ids$doc_id), as.character(ids$gender), as.character(ids$number), as.character(ids$so), as.character(ids$person), as.character(ids$prontype), ids$pos, ids$id, ids$pronoun, lag=lag, lead=lead)
+  not_noun = !ids$POS == 'NOUN'
+  ids$coref_id[not_noun] = coref_candidate_select(ids$needs_coref[not_noun], 
+                                                  as.character(ids$doc_id)[not_noun], 
+                                                  as.character(ids$gender)[not_noun], 
+                                                  as.character(ids$number)[not_noun], 
+                                                  as.character(ids$so)[not_noun], 
+                                                  as.character(ids$person)[not_noun], 
+                                                  as.character(ids$prontype)[not_noun], 
+                                                  ids$pos[not_noun], 
+                                                  ids$id[not_noun], 
+                                                  ids$pronoun[not_noun], 
+                                                  lag=lag, lead=lead)
   ids
 }
 

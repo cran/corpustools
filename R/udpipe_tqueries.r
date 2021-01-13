@@ -258,7 +258,7 @@ udpipe_spanquote_tqueries <- function(say_verbs = verb_lemma('quote')) {
 verb_lemma <- function(what = c('be', 'quote','should')) {
   what = match.arg(what)
   if (what == 'be') lemma = c('be')
-  if (what == 'quote') lemma = c("tell", "acknowledge", "admit", "affirm", "allege", "argue", "announce", "assert", "attest", "avow", "call", "claim", "comment", "concede", "confirm", "declare", "deny", "describe","exclaim", "express", "insist", "mention", "note", "post","predict", "proclaim", "promise", "reply", "refer", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "think","warn","write")
+  if (what == 'quote') lemma = c("tell", "tweet", "acknowledge", "admit", "affirm", "allege", "argue", "announce", "assert", "attest", "avow", "call", "claim", "comment", "concede", "confirm", "declare", "deny", "describe","exclaim", "express", "insist", "mention", "note", "post","predict", "proclaim", "promise", "reply", "refer", "remark", "report", "say", "speak", "state", "suggest", "talk", "tell", "think","warn","write")
   if (what == 'should') lemma = c('should','must')
   lemma
 }

@@ -1,4 +1,4 @@
-d7b812a4b305570c246bb13434b52d6e *DESCRIPTION
+608034e9556201c1420da42a0ee183fe *DESCRIPTION
 c2ab8e55c817746b1253c3ffcd3bb4c4 *NAMESPACE
 c57f9baa7f1d64b9c68da0449372ef47 *NEWS.md
 bd655f04e370726e699c7f6953cf5a6c *R/1_tcorpus.r
@@ -37,7 +37,7 @@ bf70aebc528d231e832a2cc379176262 *R/rsyntax.r
 9ef7a3d7c0bee99756041498b6d52322 *R/rsyntax_convenience.r
 1fddb9163f99b19e6d109bea572022e6 *R/search.r
 45f1b8fcacc5c7ae4e8b84ad662c1ec7 *R/search_contexts.r
-c2c221b68e66f50a09db2a9a709a57d3 *R/search_dictionary.r
+424bf1db2aca712b2b0f4b18f420e49f *R/search_dictionary.r
 81081fcc97db444dadb785e801e4e715 *R/search_features.r
 9ec8e346dace01510dc46f0d622656e0 *R/search_results.r
 97a97feb7a9216721f5d93ed78d9c646 *R/semnet.r
@@ -47,9 +47,9 @@ f4293ef1807efa0bd99510c9c2f286ac *R/semnet_plotting.r
 22304829bc102b913cb51cec35e584ce *R/subset_tcorpus.r
 b8aef3a487c09008b6cc0f38df17daf0 *R/tokenize.r
 9b6e2e0b8aebbf65e9e6bc6f55e66f51 *R/udpipe.r
-d376fbc3383162306decb577d9449171 *R/udpipe_coref.r
+ef39076260ea81cccf83dff06f619968 *R/udpipe_coref.r
 a51426904be9611a02f8bb3a4027c5be *R/udpipe_tcorpus.r
-88eb5c522927d8e805f9d41d9adecda0 *R/udpipe_tqueries.r
+f39f72f70482176e92fb8d911786ac47 *R/udpipe_tqueries.r
 2ff7ae6b25885b80b10ee1a6cee90d53 *R/udpipe_transformations.r
 27678faaeea80044664862523168dfbb *R/util.r
 a731a1b2ff66f803673680140969ee89 *README.md
@@ -61,7 +61,7 @@ f6429af029314e6fad410403d66ed681 *data/sotu_texts.rda
 4ed97dbc3646e3a5fa4a46dcf947352e *data/tc_sotu_udpipe.rda
 b0f553ba867a5632fe4980a9f4dd96ab *inst/doc/corpustools.R
 992f19006cf459682613e6ecd786de7b *inst/doc/corpustools.Rmd
-52d7163478c0821e0778c4d0c6774adb *inst/doc/corpustools.html
+7b939a1582ba24e07cf482d7041843e7 *inst/doc/corpustools.html
 b966f261661153a6d0b1614b4d2b964d *man/add_multitoken_label.Rd
 e6b8f7d5bce8e92e559f8b6a502a9ef6 *man/agg_label.Rd
 e76d0ffb37d4a7dfb150a04c81fb1e50 *man/agg_tcorpus.Rd
