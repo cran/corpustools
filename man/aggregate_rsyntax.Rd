@@ -59,9 +59,9 @@ aggregate_rsyntax(tc, 'clause',
 aggregate_rsyntax(tc, 'clause', txt='subject',
                   agg_label('predicate', n = length(token_id)))
 
-                                    
+                                
 ## example application: sentiment scores for specific subjects
-
+\dontrun{
 # first use queries to code subjects
 tc$code_features(column = 'who',
                  query  = c('I#  I~s <this president>', 
@@ -77,4 +77,5 @@ sent = aggregate_rsyntax(tc, 'clause', txt='predicate',
                   agg_label('predicate', sentiment = mean(sentiment, na.rm=TRUE)))
 head(sent)
 sent[,list(sentiment=mean(sentiment, na.rm=TRUE), n=.N), by='subject']
+}
 }

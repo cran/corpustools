@@ -45,8 +45,8 @@ udpipe_tcorpus <- function(x, ...) {
 #' }
 #' @export
 udpipe_tcorpus.character <- function(x, model='english-ewt', doc_id=1:length(x), meta=NULL, max_sentences=NULL, model_path=getwd(), cache=3, cores=NULL, batchsize=50, use_parser=T, start_end=F, verbose=T, ...) {
-  if (is.null(cores)) cores = min(data.table::getDTthreads(), Sys.getenv('OMP_THREAD_LIMIT'))
-  as.numeric()
+  if (is.null(cores)) cores = use_n_cores(cores)
+  
   if (is.null(model)) stop('model cannot be NULL')
   tc = create_tcorpus(x=x, doc_id=doc_id, meta=meta, udpipe_model=model, max_sentences=max_sentences, max_tokens=NULL, udpipe_model_path=model_path, udpipe_cache=cache, udpipe_cores=cores, udpipe_batchsize=batchsize, use_parse=use_parser, verbose=verbose, remember_spaces=T, ...)
   if (!start_end) {

@@ -209,9 +209,9 @@ agg_label <- function(label, ...) {
 #' aggregate_rsyntax(tc, 'clause', txt='subject',
 #'                   agg_label('predicate', n = length(token_id)))
 #' 
-#'                                     
+#'                                 
 #' ## example application: sentiment scores for specific subjects
-#' 
+#' \dontrun{
 #' # first use queries to code subjects
 #' tc$code_features(column = 'who',
 #'                  query  = c('I#  I~s <this president>', 
@@ -227,6 +227,7 @@ agg_label <- function(label, ...) {
 #'                   agg_label('predicate', sentiment = mean(sentiment, na.rm=TRUE)))
 #' head(sent)
 #' sent[,list(sentiment=mean(sentiment, na.rm=TRUE), n=.N), by='subject']
+#' }
 aggregate_rsyntax <- function(tc, annotation, ..., by_col=NULL, txt=F, labels=NULL, rm_na=T) {
   token = NULL
   tokens = if (methods::is(tc, 'tCorpus')) tc$tokens else tc

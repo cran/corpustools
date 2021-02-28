@@ -84,7 +84,7 @@ tCorpus$set('public', 'code_dictionary', function(dict, token_col='token', strin
 #' alternatives such as "Barack Obama", "president Obama" and "Obama".
 #'
 #' This method can also be use to concatenate ASCII symbols into emoticons, given a dictionary of emoticons.
-#' A dictionary with common emoticons is included in the corpustools data as "emoticon_dict" (see examples).
+#' 
 #'
 #' \strong{Usage:}
 #'
@@ -98,6 +98,8 @@ tCorpus$set('public', 'code_dictionary', function(dict, token_col='token', strin
 #'                        a single word or a sequence of words seperated by a whitespace (e.g., "not bad"), and can have the common ? and * wildcards.
 #'                        If a quanteda dictionary is given, it is automatically converted to this type of data.frame with the
 #'                        \code{\link{melt_quanteda_dict}} function. This can be done manually for more control over labels.
+#'                        Finally, you can also just pass a character vector. All multi word strings (like emoticons) will then be
+#'                        collapsed into single tokens.
 #' @param token_col       The feature in tc that contains the token text.
 #' @param string_col      If dict is a data.frame, the name of the column in dict with the dictionary lookup string. Default is "string"
 #' @param code_col        The name of the column in dict with the dictionary code/label. Default is "code".
@@ -123,23 +125,41 @@ tCorpus$set('public', 'code_dictionary', function(dict, token_col='token', strin
 #' @name tCorpus$replace_dictionary
 #'
 #' @examples
-#' tc = create_tcorpus('yay :) :* happy')
+#' tc = create_tcorpus('happy :) sad :( happy 8-)')
+#' tc$tokens   ## tokenization has broken up emoticons (as it should)
+#' 
+#' # corpustools dictionary lookup automatically normalizes tokenization of 
+#' # tokens and dictionary strings. The dictionary string ":)" would match both
+#' # the single token ":)" and two consequtive tokens c(":", ")"). This 
+#' # makes it easy and foolproof to look for emoticons like this:
+#' emoticon_dict = data.frame(
+#'    code   = c('happy_emo','happy_emo', 'sad_emo'), 
+#'    string = c(':)',             '8-)',      ':(')) 
+#'    
 #' tc$replace_dictionary(emoticon_dict)
+#' tc$tokens
+#'
+#' # If a string is passed to replace dictionary, it will collapse multi-word
+#' # strings. .
+#' tc = create_tcorpus('happy :) sad :( Barack Obama')
+#' tc$tokens
+#' tc$replace_dictionary(c(':)', '8-)', 'Barack Obama'))
 #' tc$tokens
 #'
 #' @aliases replace_dictionary
 tCorpus$set('public', 'replace_dictionary', function(dict, token_col='token', string_col='string', code_col='code', replace_cols=token_col, sep=' ', code_from_features=F, code_sep='_', decrement_ids=T, case_sensitive=F, use_wildcards=T, ascii=F, verbose=F){
+  if (methods::is(dict, 'character')) dict = data.frame(code=stringi::stri_unescape_unicode(dict), string=dict)
   m = search_dictionary(self, dict, token_col=token_col, string_col=string_col, code_col=code_col, sep=sep,
                         case_sensitive=case_sensitive, use_wildcards=use_wildcards,
                         ascii=ascii, verbose=verbose)
   m = m$hits
-
   if (nrow(m) == 0) return(invisible(self))
 
   if (code_from_features) m = code_from_features(m, collapse_sep=code_sep)
-
-  rename = unique(m, by=c('doc_id','hit_id'))
-  remove = m[!rename]
+  
+  is_dup = duplicated(m[,c('doc_id','hit_id')])
+  rename = m[!is_dup,]
+  remove = m[is_dup,]
 
   for (col in replace_cols) {
     self$tokens[rename, (col) := rename$code, on=c('doc_id','token_id')]
@@ -149,7 +169,7 @@ tCorpus$set('public', 'replace_dictionary', function(dict, token_col='token', st
     if (decrement_ids) {
       .REMOVE = F
       self$tokens[, .REMOVE:=.REMOVE]
-      self$tokens[remove, .REMOVE := T]
+      self$tokens[remove, .REMOVE := T, on=c('doc_id','token_id')]
       self$tokens[, token_id := token_id - cumsum(.REMOVE), by=c('doc_id')]
       self$tokens = subset(self$tokens, !.REMOVE)
       self$tokens[, .REMOVE := NULL]
