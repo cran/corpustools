@@ -108,21 +108,56 @@ create_tcorpus.character <- function(x, doc_id=1:length(x), meta=NULL, udpipe_mo
 create_tcorpus.data.frame <- function(x, text_columns='text', doc_column='doc_id', udpipe_model=NULL, split_sentences=F, max_sentences=NULL, max_tokens=NULL, udpipe_model_path=getwd(), udpipe_cache=3, udpipe_cores=NULL, udpipe_batchsize=50, use_parser=F, remember_spaces=FALSE, verbose=T, ...) {
   for(cname in text_columns) if (!cname %in% colnames(x)) stop(sprintf('text_column "%s" not in data.frame', cname))
 
-  if (length(text_columns) > 1){
-    text = do.call(paste, c(as.list(x[,text_columns]), sep='\n\n'))
-  } else {
-    text = x[[text_columns]]
-  }
-
   if (!doc_column %in% colnames(x)) {
     message('No existing document column (doc_column) specified. Using indices as id.')
-    doc_id = 1:nrow(x)
-  } else doc_id = x[[doc_column]]
+    doc_id = as.character(1:nrow(x))
+  } else doc_id = as.character(x[[doc_column]])
+  
+  if (length(text_columns) > 1){
+    for (textcol in text_columns) {
+      x[[textcol]] = stringi::stri_trim(x[[textcol]])
+      if (!textcol == text_columns[length(text_columns)]) x[[textcol]] = paste0(x[[textcol]], '\n\n')
+    }
+    text = do.call(paste0, c(as.list(x[,text_columns])))
+    
+    sections = data.table::as.data.table(lapply(x[,text_columns], stringi::stri_length))
+    for (j in ncol(sections):1) {
+      if (j == 1) 
+        sections[[j]] = 1
+      else 
+        sections[[j]] = sections[[j-1]] + 1 
+    }
+    sections$doc_id = doc_id
+    sections = data.table::melt(sections, 'doc_id', variable.name='section', value='start')
+    keep_spaces = T
+  } else {
+    text = x[[text_columns]]
+    sections = NULL
+    keep_spaces = remember_spaces
+  }
 
-  create_tcorpus(text,
+  tc = create_tcorpus(text,
                  doc_id = doc_id,
                  meta = x[,!colnames(x) %in% c(text_columns, doc_column), drop=F],
-                 udpipe_model=udpipe_model, split_sentences = split_sentences, max_sentences = max_sentences, max_tokens = max_tokens, udpipe_model_path=udpipe_model_path, udpipe_cache=udpipe_cache, udpipe_cores=udpipe_cores, udpipe_batchsize=udpipe_batchsize, use_parser=use_parser, remember_spaces=remember_spaces, verbose=verbose)
+                 udpipe_model=udpipe_model, split_sentences = split_sentences, max_sentences = max_sentences, max_tokens = max_tokens, udpipe_model_path=udpipe_model_path, udpipe_cache=udpipe_cache, udpipe_cores=udpipe_cores, udpipe_batchsize=udpipe_batchsize, use_parser=use_parser, remember_spaces=keep_spaces, verbose=verbose)
+  
+  if (!is.null(sections)) {
+    corder = c(colnames(tc$tokens)[1], 'section', colnames(tc$tokens)[-1])
+    tc$tokens = merge(tc$tokens, sections, by=c('doc_id','start'), all.x=T)
+    if (sum(!is.na(tc$tokens$section)) < nrow(sections))
+      warning(sprintf("The sections (%s) did not match correctly. This is a bug we fear (due to encoding) but haven't encountered yet, so we would appreciate if you could make an issue: https://github.com/kasperwelbers/corpustools/issues", paste(text_columns, collapse=', ')))
+   
+    tc$tokens$section = as.factor(as.character(tc$tokens$section))
+    ## workaround since data.table locf only works with numeric
+    section_levels = levels(tc$tokens$section)
+    tc$tokens$section = data.table::nafill(as.numeric(tc$tokens$section), type='locf')
+    tc$tokens$section = factor(tc$tokens$section, labels=section_levels)
+    data.table::setcolorder(tc$tokens, corder)
+  }
+  
+  if (keep_spaces && !remember_spaces) tc$delete_columns(c('start','end','space'))
+  
+  tc
 }
 
 #' @rdname create_tcorpus

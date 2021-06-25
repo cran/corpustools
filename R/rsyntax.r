@@ -53,7 +53,7 @@
 tCorpus$set('public', 'annotate_rsyntax', function(column, ..., block=NULL, fill=TRUE, overwrite=NA, block_fill=FALSE, verbose=FALSE) {
   if (column %in% self$names && is.na(overwrite)) stop(sprintf('The specified column (%s) already exists. Set overwrite argument to TRUE to overwrite the column or FALSE to consider existing annotations as a chain.', column))
   cnames = paste0(column, c('','_id','_fill'))
-  ti = rsyntax::annotate_tqueries(self$tokens, column = column, ..., block = block, fill = fill, overwrite = overwrite, block_fill = block_fill, copy=T, verbose=F) 
+  ti = rsyntax::annotate_tqueries(self$tokens, column = column, ..., block = block, fill = fill, overwrite = overwrite, block_fill = block_fill, copy=T, verbose=verbose) 
   ti = subset(ti, select = c('doc_id','token_id',cnames))
   for (cn in cnames) if (cn %in% self$names) self$set(cn, NULL)
   self$tokens = merge(self$tokens, ti, by=c('doc_id','token_id'))
@@ -193,6 +193,7 @@ agg_label <- function(label, ...) {
 #' @export    
 #'
 #' @examples
+#' \dontrun{
 #' tc = tc_sotu_udpipe$copy()
 #' tc$udpipe_clauses()
 #' 
@@ -211,7 +212,7 @@ agg_label <- function(label, ...) {
 #' 
 #'                                 
 #' ## example application: sentiment scores for specific subjects
-#' \dontrun{
+#' 
 #' # first use queries to code subjects
 #' tc$code_features(column = 'who',
 #'                  query  = c('I#  I~s <this president>', 
