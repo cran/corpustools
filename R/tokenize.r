@@ -2,7 +2,7 @@
 ## todo: test whether tokenize package is better match
 
 tokenize_to_dataframe <- function(x, doc_id=1:length(x), split_sentences=F, max_sentences=NULL, max_tokens=NULL, remember_spaces =F, verbose=F){
-  space = NULL; start = NULL; end = NULL ## data.table bindings
+  space = start = len = end = token = NULL ## data.table bindings
 
   batch_i = get_batch_i(length(doc_id), batchsize=5000, return_list=T)
   prog = if (verbose) 'text' else 'none'
@@ -17,21 +17,17 @@ tokenize_to_dataframe <- function(x, doc_id=1:length(x), split_sentences=F, max_
   }
 
   tokens = data.table::rbindlist(tokens)
+  setkey(tokens, 'doc_id', 'token_id')
+  
   if (remember_spaces) {
-    tokens$token = as.character(tokens$token)
-    ## tokens with spaces include an extra single whitespace added by collapse_terms_cpp (and undone by uncollapse_terms_cpp) 
-    tokens$length = stringi::stri_length(tokens$token) - as.numeric(stringi::stri_detect(tokens$token, fixed=' '))
-    get_start <- function(x) cumsum(c(1, x[-length(x)]))
-    tokens[, start := get_start(length), by='doc_id']
-
-    split_terms = uncollapse_terms_cpp(tokens$token)
+    split_terms = uncollapse_terms_cpp(as.character(tokens$token))
     tokens$token = fast_factor(split_terms$left)
     tokens[, space := fast_factor(split_terms$right)]
-    tokens[, end := start + stringi::stri_length(tokens$token) - 1]
-    tokens[, length := NULL]
     
-    corder = c('doc_id','sentence','token_id','token','space','start','end')
-    data.table::setcolorder(tokens, intersect(corder, colnames(tokens)))
+    tokens$len = nchar(as.character(tokens$token)) + nchar(as.character(tokens$space))
+    tokens[,start := 1 + c(0, head(cumsum(len),-1)), by='doc_id']
+    tokens[,end := start + nchar(as.character(token)) - 1]
+    tokens$len = NULL
   }
   tokens
 }
@@ -52,7 +48,7 @@ split_tokens <- function(x, max_tokens, remember_spaces=F) {
 
 tokenize_to_dataframe_batch <- function(x, doc_id, split_sentences=F, max_sentences=NULL, max_tokens=NULL, remember_spaces=T){
   token = NULL ## for solving CMD check notes (data.table syntax causes "no visible binding" message)
-  x = gsub('_', ' ', x, fixed=T)
+  #x = gsub('_', ' ', x, fixed=T) 
   x[is.na(x)] = ''
   
   if (split_sentences | !is.null(max_sentences)) {
